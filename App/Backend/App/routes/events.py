@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from bson import ObjectId
-from models.event import Event
+from ..models.event import Event
 
 events_bp = Blueprint('events', __name__)
 

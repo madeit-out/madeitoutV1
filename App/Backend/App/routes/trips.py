@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app
-from models.trip import Trip
+from ..models.trip import Trip
 from bson import ObjectId
 import jwt
 
