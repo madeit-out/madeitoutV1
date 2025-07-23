@@ -1,19 +1,62 @@
 // src/adapters/apiAdapter.js
-import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+//const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+import axios from "axios";
+
+// Create the base axios instance
 const api = axios.create({
-  baseURL: BASE_URL,
-  withCredentials: true,
+  baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:5000",
   headers: {
-    "Content-Type": "application/json"
-  }
+    "Content-Type": "application/json",
+  },
 });
 
+// Attach token before every request using an interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// -------------------------
+// Auth API
+// -------------------------
+export const AuthAPI = {
+  signUp: async (userData) => {
+    const res = await api.post("/auth/register", userData);
+    return res.data;
+  },
+
+  signIn: async (credentials) => {
+    const res = await api.post("/auth/login", credentials);
+    // Save token on successful login
+    localStorage.setItem("token", res.data.access_token);
+    return res.data;
+  },
+
+  getUser: async () => {
+    const res = await api.get("/auth/me");
+    return res.data;
+  },
+
+  logout: () => {
+    localStorage.removeItem("token");
+  },
+};
+
+// -------------------------
+// Trip API
+// -------------------------
 export const TripAPI = {
   createTrip: async (tripData) => {
-    const res = await api.post('api/trips/', tripData);
+    const res = await api.post("/trips/", tripData);
     return res.data;
   },
 
@@ -22,36 +65,13 @@ export const TripAPI = {
     return res.data;
   },
 
-  // Get all trips for a user
   getUserTrips: async () => {
-    const res = await api.get('/trips/my-trips'); // ✅ This is correct based on your Flask route
+    const res = await api.get("/trips/my-trips");
     return res.data;
   },
-  
 
-  // Add a user to an existing trip
   addUserToTrip: async (tripId, userId) => {
-    const res = await api.post(`/trips/${tripId}/add-user`, {
-      user_id: userId,
-    });
-    return res.data;
-  },
-
-};
-
-export const AuthAPI = {
-  signUp: async (userData) => {
-    const res = await api.post('api/auth/register', userData);
-    return res.data;
-  },
-
-  signIn: async (credentials) => {
-    const res = await api.post('api/auth/login', credentials);
-    return res.data;
-  },
-
-  getUser: async () => {
-    const res = await api.get('/auth/user');
+    const res = await api.post(`/trips/${tripId}/add-user`, { user_id: userId });
     return res.data;
   },
 };

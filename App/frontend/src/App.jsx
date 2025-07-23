@@ -1,29 +1,37 @@
-import { Route,Routes } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom';
 
-import './App.css'
-import banner from './components/Banner'
-import Home from './components/Home'
-import SignIn from './components/SignIn'
-import Signup from './components/Signup'
-import Dashboard from './components/TripsDashborad'
-import CreateTrip from './components/CreateTrip'
 
+import './App.css';
+import Home from './components/Home';
+import SignIn from './components/SignIn';
+import SignUp from './components/SignUp';
+import Dashboard from './components/TripsDashboard';
+import CreateTrip from './components/CreateTrip';
+import ProtectedRoute from './components/ProtectedRoute'; // <-- Add this line
 
 function App() {
-  
-
   return (
     <>
-    {/* <Head /> */}
-     <Routes>
-        <Route path="/" element={<Home />}></Route>
-        <Route path="/signin" element={<SignIn />}></Route>
-        <Route path="/signup" element={<Signup />}></Route>
-        <Route path="/dashboard" element={<Dashboard />}></Route>
-        <Route path="/create-trip" element={<CreateTrip />}></Route>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
+
+        {/* Protected routes */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/create-trip" element={
+          <ProtectedRoute>
+            <CreateTrip />
+          </ProtectedRoute>
+        } />
       </Routes>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
