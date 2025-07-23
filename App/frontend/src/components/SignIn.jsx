@@ -21,18 +21,16 @@ function SignIn() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-
     try {
-      const user = await AuthAPI.signIn(formData);
-      console.log('User signed in:', user);
-      // Optionally save token/user to localStorage or context
-      navigate('/dashboard'); // Change route after sign-in
+      const res = await AuthAPI.signIn(formData);
+      localStorage.setItem("token", res.access_token); // Save token after login
+      navigate("/dashboard");
     } catch (err) {
       console.error(err);
-      setError('Invalid credentials or server error');
+      setMessage("Login failed");
     }
   };
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">

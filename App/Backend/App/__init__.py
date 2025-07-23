@@ -4,32 +4,42 @@ from dotenv import load_dotenv
 import os
 from pymongo import MongoClient
 from flask_bcrypt import Bcrypt
+from flask_session import Session  # ✅ NEW
+
+from flask_jwt_extended import JWTManager
+
+# Add JWT setup
+
 
 def create_app():
     load_dotenv()
     app = Flask(__name__)
-    
+
     app.config["MONGO_URI"] = os.getenv("MONGO_URI")
-    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    app.config['SESSION_COOKIE_SECURE'] = False
+    app.secret_key = os.environ.get("SECRET_KEY") or "super-secret-key"
+
+    app.config["SESSION_COOKIE_SAMESITE"] = "None"
+    app.config["SESSION_COOKIE_SECURE"] = (
+        False  # Use True in production, False for local dev
+    )
+    app.config["SESSION_TYPE"] = "filesystem"  # This stores sessions on disk
+    app.config["SESSION_PERMANENT"] = False
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")  # add to .env
 
     # Apply CORS globally - this is the key fix
-    CORS(app, supports_credentials=True,  # ✅ Fixed indentation
-         origins=["http://localhost:5173"],
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         allow_headers=[
-             "Content-Type", 
-             "Authorization", 
-             "Access-Control-Allow-Credentials",
-             "Access-Control-Allow-Origin"
-         ],
-         expose_headers=["Content-Type", "Authorization",'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Credentials': 'true'])
+    CORS(
+        app,
+        supports_credentials=True,
+        origins=["http://localhost:5173"],
+    )
+
+    Session(app)
+    jwt = JWTManager(app)
 
     # Bcrypt init
     bcrypt = Bcrypt(app)
-    app.bcrypt = bcrypt 
-    app.extensions['bcrypt'] = bcrypt
+    app.bcrypt = bcrypt
+    app.extensions["bcrypt"] = bcrypt
 
     # Mongo init
     client = MongoClient(app.config["MONGO_URI"])
