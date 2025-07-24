@@ -1,4 +1,7 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+/* You can add your own custom global CSS rules here below the @import */
+/* For example: */
+/* body {
+  font-family: 'Inter', sans-serif;
+} */

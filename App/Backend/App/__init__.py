@@ -1,14 +1,16 @@
-from flask import Flask
+from flask import Flask, request, jsonify, current_app
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 from pymongo import MongoClient
 from flask_bcrypt import Bcrypt
 
-
 from flask_jwt_extended import JWTManager
+from flask_socketio import SocketIO  # Import SocketIO
 
-# Add JWT setup
+# Initialize SocketIO globally, but without the app instance yet.
+# This instance will be initialized with the app inside create_app().
+socketio = SocketIO()
 
 
 def create_app():
@@ -26,15 +28,22 @@ def create_app():
     app.config["SESSION_PERMANENT"] = False
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")  # add to .env
 
-    # Apply CORS globally - this is the key fix
+    # Apply CORS globally for HTTP requests
     CORS(
         app,
         supports_credentials=True,
-        origins=["http://localhost:5173"],
+        origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     )
 
-    
     jwt = JWTManager(app)
+
+    # Initialize SocketIO with the Flask app here
+    # This associates the global socketio instance with the app.
+    socketio.init_app(
+        app, cors_allowed_origins=["http://localhost:5173", "http://127.0.0.1:5173"]
+    )
+    # Store socketio instance in app.extensions for access in other modules
+    app.extensions["socketio"] = socketio  # Now storing the global instance
 
     # Bcrypt init
     bcrypt = Bcrypt(app)
@@ -50,8 +59,16 @@ def create_app():
     from .routes.trips import trips_bp
     from .routes.events import events_bp
 
+    # CRUCIAL: Simply import the sockets module here.
+    # This import will cause the module to be executed, and its @socketio.on decorators
+    # (or socketio.on_namespace call) will bind to the global 'socketio' instance initialized above.
+    from .routes import sockets  # Just import the module, no specific function/class
+
+    # END CRUCIAL SECTION
+
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(trips_bp, url_prefix="/api/trips")
     app.register_blueprint(events_bp, url_prefix="/api/events")
 
-    return app
+    # Return both the Flask app and the global socketio instance
+    return app, socketio
