@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 from pymongo import MongoClient
 from flask_bcrypt import Bcrypt
-from flask_session import Session  # ✅ NEW
+
 
 from flask_jwt_extended import JWTManager
 
@@ -33,7 +33,7 @@ def create_app():
         origins=["http://localhost:5173"],
     )
 
-    Session(app)
+    
     jwt = JWTManager(app)
 
     # Bcrypt init
