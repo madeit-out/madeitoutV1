@@ -1,16 +1,16 @@
 // src/pages/CreateTrip.jsx
-import React, { useState } from 'react';
-import { TripAPI } from '../adapters/apiAdapter';
+import React, { useState } from "react";
+import { TripAPI } from "../adapters/apiAdapter";
 
 const CreateTrip = () => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    title: '',
-    arrival: '',
-    departure: '',
-    memberUsernames: '', // comma-separated usernames
+    title: "",
+    arrival: "",
+    departure: "",
+    memberUsernames: "", // comma-separated usernames
   });
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
 
   const handleNext = () => {
     if (step < 4) setStep(step + 1);
@@ -27,7 +27,7 @@ const CreateTrip = () => {
   const handleSubmit = async () => {
     try {
       const formattedUsernames = formData.memberUsernames
-        ? formData.memberUsernames.split(',').map(name => name.trim())
+        ? formData.memberUsernames.split(",").map((name) => name.trim())
         : [];
 
       const payload = {
@@ -38,34 +38,34 @@ const CreateTrip = () => {
       };
 
       await TripAPI.createTrip(payload);
-      console.log('Trip created successfully:', payload);
-      setMessage('Trip created successfully!');
+      console.log("Trip created successfully:", payload);
+      setMessage("Trip created successfully!");
     } catch (err) {
       console.error(err);
-      setMessage('Failed to create trip.');
+      setMessage("Failed to create trip.");
     }
   };
 
   const questions = [
     {
-      label: 'What’s the name of your trip?',
-      name: 'title',
-      type: 'text',
+      label: "What’s the name of your trip?",
+      name: "title",
+      type: "text",
     },
     {
-      label: 'When does the trip start?',
-      name: 'arrival',
-      type: 'date',
+      label: "When does the trip start?",
+      name: "arrival",
+      type: "date",
     },
     {
-      label: 'When does the trip end?',
-      name: 'departure',
-      type: 'date',
+      label: "When does the trip end?",
+      name: "departure",
+      type: "date",
     },
     {
-      label: 'Usernames of people joining? (comma separated)',
-      name: 'memberUsernames',
-      type: 'text',
+      label: "Usernames of people joining? (comma separated)",
+      name: "memberUsernames",
+      type: "text",
     },
   ];
 

@@ -125,6 +125,7 @@ export const TripAPI = {
   },
   getPendingInvites: async () => {
     const res = await api.get("/trips/pending-invites");
+    console.log(res.data);
     return res.data;
   },
 
