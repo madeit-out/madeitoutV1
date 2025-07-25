@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TripAPI } from "../adapters/apiAdapter";
 import { useUser } from "../context/UserContext";
+import ProfileButton from "./ProfileButton"; // ProfileButton
 
 export default function Dashboard() {
   const { user, loadingUser } = useUser();
@@ -11,6 +12,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true); // Initial loading state for the dashboard
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+
+  // State for the TripDetailsModal
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState(null);
 
   const fetchTrips = async () => {
     try {
@@ -60,13 +65,17 @@ export default function Dashboard() {
     loadDashboardData();
   }, [user, loadingUser]); // Depend on user and loadingUser
 
+  // Functions to open and close the details modal
+
   if (loading) {
     return (
       // Loading state: Centered, dark background text
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#01374A] to-[#012A3D]">
         <div className="flex flex-col items-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-[#72ADBF]"></div>
-          <p className="ml-3 text-[#72ADBF] text-lg mt-4">Loading your trips…</p>
+          <p className="ml-3 text-[#72ADBF] text-lg mt-4">
+            Loading your trips…
+          </p>
         </div>
       </div>
     );
@@ -146,30 +155,33 @@ export default function Dashboard() {
     >
       <div className="flex justify-between items-start">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-[#72ADBF] text-lg truncate mb-1"> {/* Accent color for title */}
+          <h3 className="font-semibold text-[#72ADBF] text-lg truncate mb-1">
+            {" "}
+            {/* Accent color for title */}
             {trip.title}
           </h3>
-          <p className="text-sm text-gray-300 mt-1"> {/* Lighter gray for dates */}
+          <p className="text-sm text-gray-300 mt-1">
+            {" "}
+            {/* Lighter gray for dates */}
             {formatDateRange(trip.arrival, trip.departure)}
           </p>
           {showCountdown && (
-            <p className="text-sm text-[#0395A7] mt-2 font-medium"> {/* Bright cyan for countdown */}
+            <p className="text-sm text-[#0395A7] mt-2 font-medium">
+              {" "}
+              {/* Bright cyan for countdown */}
               {getDaysUntil(trip.arrival)}
             </p>
           )}
-          <p className="text-xs text-gray-400 mt-2"> {/* Grayer for members */}
+          <p className="text-xs text-gray-400 mt-2">
+            {" "}
+            {/* Grayer for members */}
             {trip.members?.length || 1} member
             {(trip.members?.length || 1) !== 1 ? "s" : ""}
           </p>
         </div>
-        <div className="ml-4 flex flex-col space-y-2 items-end"> {/* Increased space-y */}
-          {/* View Details Button: Accent color text, subtle hover underline */}
-          <button
-            onClick={() => navigate(`/trips/${trip._id}`)}
-            className="text-sm text-[#72ADBF] hover:text-white font-medium hover:underline transition-colors"
-          >
-            View Details
-          </button>
+        <div className="ml-4 flex flex-col space-y-2 items-end">
+          {" "}
+          {/* Increased space-y */}
           {/* Itinerary Button: Accent color text, subtle hover underline */}
           <button
             onClick={() => navigate(`/trips/${trip._id}/itinerary`)}
@@ -186,14 +198,23 @@ export default function Dashboard() {
     if (tripList.length === 0) return null;
 
     return (
-      <section className="mb-10"> {/* Increased mb */}
-        <div className="flex justify-between items-center mb-5"> {/* Increased mb */}
-          <h2 className="text-xl font-medium text-[#72ADBF]">{title}</h2> {/* Accent color for section titles */}
-          <span className="text-sm text-gray-300 bg-[#01374A] px-3 py-1 rounded-full"> {/* Darker background for count */}
+      <section className="mb-10">
+        {" "}
+        {/* Increased mb */}
+        <div className="flex justify-between items-center mb-5">
+          {" "}
+          {/* Increased mb */}
+          <h2 className="text-xl font-medium text-[#72ADBF]">{title}</h2>{" "}
+          {/* Accent color for section titles */}
+          <span className="text-sm text-gray-300 bg-[#01374A] px-3 py-1 rounded-full">
+            {" "}
+            {/* Darker background for count */}
             {tripList.length}
           </span>
         </div>
-        <ul className="space-y-4"> {/* Increased space-y */}
+        <ul className="space-y-4">
+          {" "}
+          {/* Increased space-y */}
           {tripList.map((trip) => renderTripCard(trip, showCountdown))}
         </ul>
       </section>
@@ -206,9 +227,14 @@ export default function Dashboard() {
     // Main container: Dark background, generous padding
     <div className="min-h-screen bg-gradient-to-br from-[#01374A] to-[#012A3D] text-white py-12 px-6">
       <div className="max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-8"> {/* Increased mb */}
-          <h1 className="text-3xl font-bold text-[#72ADBF]">Your Trips</h1> {/* Larger, accent-colored heading */}
-          <div className="flex space-x-4 items-center"> {/* Increased space-x */}
+        <div className="flex justify-between items-center mb-8">
+          {" "}
+          {/* Increased mb */}
+          <h1 className="text-3xl font-bold text-[#72ADBF]">Your Trips</h1>{" "}
+          {/* Larger, accent-colored heading */}
+          <div className="flex space-x-4 items-center">
+            {" "}
+            {/* Increased space-x */}
             {/* Refresh Button: Subtle icon button */}
             <button
               onClick={handleRefresh}
@@ -235,6 +261,10 @@ export default function Dashboard() {
             >
               + New Trip
             </button>
+            {/* Profile Button: Assuming it's added here as well, if not, you can add it */}
+            {/* <div className="ml-auto">
+              <ProfileButton />
+            </div> */}
           </div>
         </div>
 
@@ -246,9 +276,15 @@ export default function Dashboard() {
           </>
         ) : (
           // No trips state: Darker background, updated text and button
-          <div className="text-center mt-20"> {/* Increased mt */}
-            <div className="bg-[#012A3D] rounded-xl p-10 shadow-xl"> {/* Darker background, more padding */}
-              <div className="mb-6"> {/* Increased mb */}
+          <div className="text-center mt-20">
+            {" "}
+            {/* Increased mt */}
+            <div className="bg-[#012A3D] rounded-xl p-10 shadow-xl">
+              {" "}
+              {/* Darker background, more padding */}
+              <div className="mb-6">
+                {" "}
+                {/* Increased mb */}
                 <svg
                   className="mx-auto h-16 w-16 text-[#72ADBF]" // Larger, accent color icon
                   fill="none"
@@ -263,10 +299,14 @@ export default function Dashboard() {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-[#72ADBF] mb-3"> {/* Accent color for heading */}
+              <h3 className="text-xl font-bold text-[#72ADBF] mb-3">
+                {" "}
+                {/* Accent color for heading */}
                 No trips yet
               </h3>
-              <p className="text-gray-300 mb-8"> {/* Lighter gray for paragraph */}
+              <p className="text-gray-300 mb-8">
+                {" "}
+                {/* Lighter gray for paragraph */}
                 Start planning your next adventure by creating your first trip.
               </p>
               <button
