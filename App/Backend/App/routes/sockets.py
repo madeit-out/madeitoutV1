@@ -7,19 +7,14 @@ from bson import ObjectId, errors
 from datetime import datetime
 
 # Import the global socketio instance from the main app package
-# 'app' here refers to the 'app' directory/package where socketio is defined globally
 from app import socketio
-
 
 # Custom JWT authentication decorator for SocketIO
 def jwt_socket_required(f):
-    # The wrapper needs to accept 'self' as the first argument
-    # when decorating a method of a class (like a Namespace).
     def wrapper(self, *args, **kwargs):
         try:
             token = request.args.get("token")
             if not token:
-                # Use self.emit because we are inside a Namespace method
                 self.emit(
                     "error",
                     {"message": "Authentication token missing."},
@@ -29,27 +24,21 @@ def jwt_socket_required(f):
 
             decoded_token = decode_token(token)
             user_id = decoded_token["sub"]
-            request.sid_data = {"user_id": user_id}  # Attach user_id to socket context
-
-            # Pass 'self' explicitly to the original function 'f'
+            request.sid_data = {"user_id": user_id}
             return f(self, *args, **kwargs)
         except Exception as e:
             print(f"SocketIO authentication failed: {e}")
             self.emit(
                 "error", {"message": "Authentication failed."}, room=request.sid
-            )  # Use self.emit
+            )
             return False
-
     return wrapper
-
 
 # Define a SocketIO Namespace for trip chat events
 class TripChatNamespace(Namespace):
     def on_connect(self):
-        # The jwt_socket_required decorator will handle auth before this is called
         user_id = getattr(request, "sid_data", {}).get("user_id", "anonymous")
         print(f"Client connected: {request.sid}, User ID: {user_id}")
-        # No emit here, as the client might not be in a room yet.
 
     def on_disconnect(self):
         user_id = getattr(request, "sid_data", {}).get("user_id", "anonymous")
@@ -105,13 +94,11 @@ class TripChatNamespace(Namespace):
             room=trip_id,
         )
 
-    # TEMPORARILY REMOVED @jwt_socket_required for debugging
-    def on_chat_message(self, data):  # Method name matches event 'chat message'
+    @jwt_socket_required
+    def on_chat_message(self, data):
         db = current_app.db
 
-        # --- DEBUGGING ADDITIONS START ---
         print(f"SocketIO Debug: Received 'chat message' event with data: {data}")
-        # --- DEBUGGING ADDITIONS END ---
 
         text = data.get("text")
         sender_id_from_frontend = data.get("senderId")
@@ -123,19 +110,17 @@ class TripChatNamespace(Namespace):
             self.emit("error", {"message": "Invalid message data."})
             return
 
-        # Authenticated user ID check is temporarily skipped here for debugging
-        # authenticated_user_id = request.sid_data["user_id"]
-        # if str(authenticated_user_id) != str(sender_id_from_frontend):
-        #     print(
-        #         f"SocketIO Debug: Unauthorized sender. Authenticated: {authenticated_user_id}, Frontend: {sender_id_from_frontend}"
-        #     )
-        #     self.emit("error", {"message": "Unauthorized message sender."})
-        #     return
+        authenticated_user_id = request.sid_data["user_id"]
+        if str(authenticated_user_id) != str(sender_id_from_frontend):
+            print(
+                f"SocketIO Debug: Unauthorized sender. Authenticated: {authenticated_user_id}, Frontend: {sender_id_from_frontend}"
+            )
+            self.emit("error", {"message": "Unauthorized message sender."})
+            return
 
         try:
             trip_obj_id = ObjectId(trip_id)
-            # Use sender_id_from_frontend directly for this test
-            sender_obj_id = ObjectId(sender_id_from_frontend)
+            sender_obj_id = ObjectId(authenticated_user_id)
             timestamp_dt = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
         except (errors.InvalidId, ValueError) as e:
             print(f"SocketIO Debug: Invalid ID or timestamp format: {e}, Data: {data}")
@@ -145,7 +130,7 @@ class TripChatNamespace(Namespace):
         trip = db.trips.find_one({"_id": trip_obj_id, "members": sender_obj_id})
         if not trip:
             print(
-                f"SocketIO Debug: User {sender_id_from_frontend} not authorized for trip {trip_id}"
+                f"SocketIO Debug: User {authenticated_user_id} not authorized for trip {trip_id}"
             )
             self.emit(
                 "error", {"message": "Unauthorized to send messages in this trip chat."}
@@ -170,24 +155,12 @@ class TripChatNamespace(Namespace):
             "timestamp": message_doc["timestamp"].isoformat(),
         }
 
-        # --- DEBUGGING ADDITIONS START ---
         print(f"SocketIO Debug: Message saved and broadcasting: {broadcast_message}")
-        # --- DEBUGGING ADDING END ---
         self.emit("chat message", broadcast_message, room=trip_id)
 
-    # --- NEW CATCH-ALL EVENT HANDLER START ---
-    def on_event(self, event_name, *args, **kwargs):
-        """
-        Catch-all handler for any event not explicitly handled.
-        This is for debugging to see if events are reaching the namespace at all.
-        """
-        print(
-            f"SocketIO Debug: TripChatNamespace received unhandled event: '{event_name}' with args: {args} and kwargs: {kwargs}"
-        )
+# Catch-all handler for any event not explicitly handled within the namespace.
+def on_event(event_name, *args, **kwargs):
+    print(f"SocketIO Debug: TripChatNamespace received unhandled event: '{event_name}' with args: {args} and kwargs: {kwargs}")
 
-    # --- NEW CATCH-ALL EVENT HANDLER END ---
-
-
-# CRUCIAL: Register the namespace at the root path when the module is imported
-# This line is vital for event binding when app/routes/sockets is imported by app/__init__.py
-socketio.on_namespace(TripChatNamespace("/"))
+# Register the namespace at the root path when the module is imported
+socketio.on_namespace(TripChatNamespace('/'))

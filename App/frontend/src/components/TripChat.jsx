@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
 import { format, parseISO } from "date-fns";
-import { ChatSocket } from "../adapters/socketAdapters.js"; // Added .js extension
+// FIX: Import the default export (the socket instance) as 'socketInstance'
+import {
+  ChatSocket,
+  default as socketInstance,
+} from "../adapters/socketAdapters.js";
 
 // TripChat component to handle all chat-related logic and UI
 export default function TripChat({ tripId, userId }) {
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState("");
   const [socketConnected, setSocketConnected] = useState(false); // Track socket connection status
-  const [chatError, setChatError] = useState(''); // State for chat-specific errors
+  const [chatError, setChatError] = useState(""); // State for chat-specific errors
   const messagesEndRef = useRef(null); // Ref for scrolling to latest message
   const chatContainerRef = useRef(null); // Ref for the scrollable message area
 
@@ -19,7 +23,8 @@ export default function TripChat({ tripId, userId }) {
   // Function to check if the user is at the bottom of the scrollable chat
   const checkIfAtBottom = () => {
     if (chatContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const { scrollTop, scrollHeight, clientHeight } =
+        chatContainerRef.current;
       // Allow a small tolerance (e.g., 1px) for being at the bottom
       const atBottom = scrollHeight - scrollTop <= clientHeight + 1;
       setIsAtBottom(atBottom);
@@ -36,16 +41,40 @@ export default function TripChat({ tripId, userId }) {
   // Effect for WebSocket connection and message handling
   useEffect(() => {
     if (!tripId || !userId) {
-      console.log("TripChat: Waiting for tripId or userId to establish socket connection.");
+      console.log(
+        "TripChat: Waiting for tripId or userId to establish socket connection."
+      );
       return;
     }
 
-    ChatSocket.connect();
-    setSocketConnected(true);
+    // Set connection status callbacks in ChatSocket
+    ChatSocket.setConnectionCallbacks(
+      (connected) => {
+        setSocketConnected(connected);
+        if (!connected) {
+          setChatError("Lost connection to chat. Please refresh.");
+        } else {
+          setChatError(""); // Clear error on successful reconnection
+          // If reconnected, rejoin the room
+          ChatSocket.joinRoom(tripId);
+        }
+      },
+      (connected) => {
+        setSocketConnected(connected);
+        if (!connected) {
+          setChatError("Lost connection to chat. Please refresh.");
+        }
+      }
+    );
+
+    ChatSocket.connect(); // Attempt to connect
 
     const handleNewMessage = (msg) => {
-      console.log('TripChat: Received message:', msg);
-      setMessages((prevMessages) => [...prevMessages, { ...msg, timestamp: new Date(msg.timestamp) }]);
+      console.log("TripChat: Received message:", msg);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { ...msg, timestamp: new Date(msg.timestamp) },
+      ]);
 
       // If not at the bottom, mark as unread
       if (!checkIfAtBottom()) {
@@ -54,11 +83,15 @@ export default function TripChat({ tripId, userId }) {
     };
 
     const handleHistoricalMessages = (msgs) => {
-      console.log('TripChat: Received historical messages:', msgs);
-      const parsedMsgs = msgs.map(msg => ({ ...msg, timestamp: new Date(msg.timestamp) }));
+      console.log("TripChat: Received historical messages:", msgs);
+      const parsedMsgs = msgs.map((msg) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp),
+      }));
       setMessages(parsedMsgs);
       // After loading historical messages, scroll to bottom and clear unread
-      setTimeout(() => { // Use setTimeout to ensure DOM updates first
+      setTimeout(() => {
+        // Use setTimeout to ensure DOM updates first
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         setHasUnreadMessages(false);
         setIsAtBottom(true);
@@ -66,14 +99,14 @@ export default function TripChat({ tripId, userId }) {
     };
 
     const handleStatusMessage = (msg) => {
-      console.log('TripChat: Status:', msg.text);
+      console.log("TripChat: Status:", msg.text);
       // You can decide if status messages should trigger unread indicator
     };
 
     const handleSocketError = (err) => {
-      console.error('TripChat: WebSocket error:', err);
-      setChatError(err.message || 'Chat connection error.');
-      setSocketConnected(false); // Update connection status on error
+      console.error("TripChat: WebSocket error:", err);
+      setChatError(err.message || "Chat connection error.");
+      // Do NOT set socketConnected to false here, let the disconnect event handle it
     };
 
     ChatSocket.onMessage(handleNewMessage);
@@ -81,7 +114,12 @@ export default function TripChat({ tripId, userId }) {
     ChatSocket.onStatusMessage(handleStatusMessage);
     ChatSocket.onError(handleSocketError);
 
-    ChatSocket.joinRoom(tripId);
+    // Join room only if already connected, otherwise it will be joined on connect callback
+    // FIX: Use the directly imported socketInstance here
+    if (socketInstance.connected) {
+      // <-- CORRECTED LINE
+      ChatSocket.joinRoom(tripId);
+    }
 
     return () => {
       console.log("TripChat: Cleaning up socket listeners and disconnecting.");
@@ -107,26 +145,30 @@ export default function TripChat({ tripId, userId }) {
     e.preventDefault();
     console.log("TripChat Debug: Attempting to send message.");
     console.log(`TripChat Debug: newMessage: '${newMessage}'`);
-    console.log(`TripChat Debug: socketConnected: ${socketConnected}`);
+    console.log(`TripChat Debug: socketConnected: ${socketConnected}`); // This will now be accurate
     console.log(`TripChat Debug: userId: '${userId}'`);
 
     if (newMessage.trim() && socketConnected && userId) {
-      console.log("TripChat Debug: All conditions met. Calling ChatSocket.sendMessage.");
+      // Check socketConnected here
+      console.log(
+        "TripChat Debug: All conditions met. Calling ChatSocket.sendMessage."
+      );
       ChatSocket.sendMessage(tripId, newMessage, userId);
-      setNewMessage('');
-      setChatError('');
+      setNewMessage("");
+      setChatError("");
       setHasUnreadMessages(false); // Clear unread when sending a message
       setIsAtBottom(true); // Assume user wants to be at bottom after sending
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); // Force scroll down
     } else {
       console.log("TripChat Debug: Conditions NOT met for sending message.");
       if (!newMessage.trim()) {
-        setChatError('Message cannot be empty.');
+        setChatError("Message cannot be empty.");
         console.log("TripChat Debug: Message is empty.");
       } else if (!socketConnected) {
-        setChatError('Chat is not connected. Please try again.');
+        setChatError("Chat is not connected. Please try again.");
+        console.log("TripChat Debug: Socket not connected.");
       } else if (!userId) {
-        setChatError('User not identified for chat.');
+        setChatError("User not identified for chat.");
         console.log("TripChat Debug: User ID is missing.");
       }
     }
@@ -142,7 +184,7 @@ export default function TripChat({ tripId, userId }) {
           <span className="absolute -top-1 -right-1 bg-red-500 rounded-full h-3 w-3 animate-pulse"></span>
         )}
       </h2>
-      
+
       {/* Message Display Area */}
       <div
         ref={chatContainerRef} // Attach ref to the scrollable container
@@ -152,25 +194,39 @@ export default function TripChat({ tripId, userId }) {
         {chatError && (
           <p className="text-red-400 text-center mb-2">{chatError}</p>
         )}
-        {!socketConnected && !chatError && (
-          <p className="text-gray-400 text-center mt-auto mb-auto">Connecting to chat...</p>
-        )}
-        {messages.length === 0 && socketConnected && !chatError ? (
-          <p className="text-gray-400 text-center mt-auto mb-auto">No messages yet. Start the conversation!</p>
+        {!socketConnected && !chatError ? (
+          <p className="text-gray-400 text-center mt-auto mb-auto">
+            Connecting to chat...
+          </p>
+        ) : messages.length === 0 && !chatError ? ( // Only show if no messages AND no error
+          <p className="text-gray-400 text-center mt-auto mb-auto">
+            No messages yet. Start the conversation!
+          </p>
         ) : (
           messages.map((msg, index) => (
-            <div key={index} className={`flex ${msg.senderId === userId ? 'justify-end' : 'justify-start'}`}>
-              <div className={`p-3 rounded-lg max-w-[70%] ${
-                msg.senderId === userId
-                  ? 'bg-[#0395A7] text-white shadow-md' // Your messages
-                  : 'bg-gray-700 text-gray-200 shadow-sm' // Other users' messages
-              }`}>
+            <div
+              key={index}
+              className={`flex ${
+                msg.senderId === userId ? "justify-end" : "justify-start"
+              }`}
+            >
+              <div
+                className={`p-3 rounded-lg max-w-[70%] ${
+                  msg.senderId === userId
+                    ? "bg-[#0395A7] text-white shadow-md" // Your messages
+                    : "bg-gray-700 text-gray-200 shadow-sm" // Other users' messages
+                }`}
+              >
                 <span className="block text-xs font-semibold mb-1 text-gray-100">
-                  {msg.senderId === userId ? 'You' : `User: ${msg.senderId.substring(0, 8)}...`}
+                  {msg.senderId === userId
+                    ? "You"
+                    : `User: ${msg.senderId.substring(0, 8)}...`}
                 </span>
                 <p className="text-sm break-words">{msg.text}</p>
                 <span className="block text-right text-xs text-gray-400 mt-1">
-                  {msg.timestamp instanceof Date ? format(msg.timestamp, 'p') : 'Invalid Time'}
+                  {msg.timestamp instanceof Date
+                    ? format(msg.timestamp, "p")
+                    : "Invalid Time"}
                 </span>
               </div>
             </div>
@@ -187,7 +243,7 @@ export default function TripChat({ tripId, userId }) {
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Type your message..."
           className="flex-1 bg-[#01374A] text-white placeholder-gray-400 border border-[#72ADBF] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#0395A7]"
-          disabled={!socketConnected || !userId}
+          disabled={!socketConnected || !userId} // Disable if not connected
         />
         <button
           type="submit"
@@ -198,7 +254,7 @@ export default function TripChat({ tripId, userId }) {
                      shadow-md hover:shadow-lg transform hover:scale-105
                      focus:outline-none focus:ring-2 focus:ring-[#72ADBF]
                      disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={!socketConnected || !newMessage.trim() || !userId}
+          disabled={!socketConnected || !newMessage.trim() || !userId} // Disable if not connected or message empty
         >
           Send
         </button>

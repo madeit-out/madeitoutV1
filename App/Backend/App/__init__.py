@@ -4,14 +4,11 @@ from dotenv import load_dotenv
 import os
 from pymongo import MongoClient
 from flask_bcrypt import Bcrypt
-
 from flask_jwt_extended import JWTManager
-from flask_socketio import SocketIO  # Import SocketIO
+from flask_socketio import SocketIO
 
 # Initialize SocketIO globally, but without the app instance yet.
-# This instance will be initialized with the app inside create_app().
 socketio = SocketIO()
-
 
 def create_app():
     load_dotenv()
@@ -38,12 +35,10 @@ def create_app():
     jwt = JWTManager(app)
 
     # Initialize SocketIO with the Flask app here
-    # This associates the global socketio instance with the app.
     socketio.init_app(
         app, cors_allowed_origins=["http://localhost:5173", "http://127.0.0.1:5173"]
     )
-    # Store socketio instance in app.extensions for access in other modules
-    app.extensions["socketio"] = socketio  # Now storing the global instance
+    app.extensions["socketio"] = socketio
 
     # Bcrypt init
     bcrypt = Bcrypt(app)
@@ -59,12 +54,8 @@ def create_app():
     from .routes.trips import trips_bp
     from .routes.events import events_bp
 
-    # CRUCIAL: Simply import the sockets module here.
-    # This import will cause the module to be executed, and its @socketio.on decorators
-    # (or socketio.on_namespace call) will bind to the global 'socketio' instance initialized above.
-    from .routes import sockets  # Just import the module, no specific function/class
-
-    # END CRUCIAL SECTION
+    # Import sockets module to bind events
+    from .routes import sockets
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(trips_bp, url_prefix="/api/trips")

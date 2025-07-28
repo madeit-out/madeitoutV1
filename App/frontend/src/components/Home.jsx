@@ -1,5 +1,5 @@
-import React from 'react';
-
+import React from "react";
+import Banner from "./Banner";
 // Main App component to render the Home component
 function App() {
   return <Home />;
@@ -10,14 +10,18 @@ function Home() {
   return (
     // Main container: full screen height, centered content, deep dark gradient background
     // The gradient provides subtle depth, similar to A24's often rich, dark backgrounds.
-    <div className="min-h-screen flex flex-col items-center justify-center py-16 px-8
-                    bg-gradient-to-br from-[#01374A] to-[#012A3D] font-inter text-white">
-
+    <div
+      className="min-h-screen flex flex-col items-center justify-center py-16 px-8
+                    bg-gradient-to-br from-[#01374A] to-[#012A3D] font-inter text-white"
+    >
       {/* Main heading: Even larger, more impactful, and centered with generous vertical spacing.
           Font-black for maximum boldness, tracking-tight for a modern condensed feel. */}
-      <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black mb-24
-                     text-[#72ADBF] text-center max-w-6xl leading-tight tracking-tight">
-        ARE YOU READY TO PLAN A TRIP FOR YOU, YOUR FRIENDS, FAMILY, COWORKERS, OR ANYONE ELSE?
+      <h1
+        className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black mb-24
+                     text-[#72ADBF] text-center max-w-6xl leading-tight tracking-tight"
+      >
+        ARE YOU READY TO PLAN A TRIP FOR YOU, YOUR FRIENDS, FAMILY, COWORKERS,
+        OR ANYONE ELSE?
       </h1>
 
       {/* Buttons container: Simplified, sitting directly on the main background.
@@ -59,4 +63,4 @@ function Home() {
 }
 
 export default App; // Export App as the default component
-3
+3;

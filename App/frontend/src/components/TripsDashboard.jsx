@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TripAPI } from "../adapters/apiAdapter";
 import { useUser } from "../context/UserContext";
-import ProfileButton from "./ProfileButton"; // ProfileButton
+import ProfileButton from "./ProfileButton"; // ProfileButton (assuming it's still used elsewhere if uncommented)
+// REMOVED: import TripDetailsModal from "./TripDetailsModal";
 
 export default function Dashboard() {
   const { user, loadingUser } = useUser();
@@ -13,9 +14,9 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
-  // State for the TripDetailsModal
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [selectedTrip, setSelectedTrip] = useState(null);
+  // REMOVED: State for the TripDetailsModal
+  // const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  // const [selectedTrip, setSelectedTrip] = useState(null);
 
   const fetchTrips = async () => {
     try {
@@ -65,7 +66,16 @@ export default function Dashboard() {
     loadDashboardData();
   }, [user, loadingUser]); // Depend on user and loadingUser
 
-  // Functions to open and close the details modal
+  // REMOVED: Functions to open and close the details modal
+  // const openDetailsModal = (trip) => {
+  //   setSelectedTrip(trip);
+  //   setIsDetailsModalOpen(true);
+  // };
+
+  // const closeDetailsModal = () => {
+  //   setIsDetailsModalOpen(false);
+  //   setSelectedTrip(null); // Clear selected trip when closing
+  // };
 
   if (loading) {
     return (
@@ -175,13 +185,14 @@ export default function Dashboard() {
           <p className="text-xs text-gray-400 mt-2">
             {" "}
             {/* Grayer for members */}
-            {trip.members?.length || 1} member
-            {(trip.members?.length || 1) !== 1 ? "s" : ""}
+            {trip.members_info?.length || 1} member
+            {(trip.members_info?.length || 1) !== 1 ? "s" : ""}
           </p>
         </div>
         <div className="ml-4 flex flex-col space-y-2 items-end">
           {" "}
           {/* Increased space-y */}
+          {/* REMOVED: View Details Button */}
           {/* Itinerary Button: Accent color text, subtle hover underline */}
           <button
             onClick={() => navigate(`/trips/${trip._id}/itinerary`)}
@@ -324,6 +335,13 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* REMOVED: Trip Details Modal */}
+      {/* <TripDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={closeDetailsModal}
+        trip={selectedTrip}
+      /> */}
     </div>
   );
 }

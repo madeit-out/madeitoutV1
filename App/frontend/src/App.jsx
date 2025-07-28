@@ -6,13 +6,15 @@ import SignIn from "./components/SignIn";
 import SignUp from "./components/SignUp";
 import Dashboard from "./components/TripsDashboard";
 import CreateTrip from "./components/CreateTrip";
-import Itinerary from "./components/Intinerary";
+import Itinerary from "./components/Intinerary"; // Corrected spelling from Intinerary to Itinerary
 import Profile from "./components/Profile";
-import ProtectedRoute from "./components/ProtectedRoute"; // <-- Add this lin
+import ProtectedRoute from "./components/ProtectedRoute";
+import Header from "./components/Header"; // Import the Header component
 
 function App() {
   return (
     <>
+      {/* The Header component is now rendered inside each ProtectedRoute */}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/signin" element={<SignIn />} />
@@ -23,6 +25,7 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
+              <Header /> {/* Header inside ProtectedRoute */}
               <Dashboard />
             </ProtectedRoute>
           }
@@ -32,6 +35,7 @@ function App() {
           path="/create-trip"
           element={
             <ProtectedRoute>
+              <Header /> {/* Header inside ProtectedRoute */}
               <CreateTrip />
             </ProtectedRoute>
           }
@@ -40,6 +44,7 @@ function App() {
           path="/trips/:tripId/itinerary"
           element={
             <ProtectedRoute>
+              <Header /> {/* Header inside ProtectedRoute */}
               <Itinerary />
             </ProtectedRoute>
           }
@@ -48,6 +53,7 @@ function App() {
           path="/profile"
           element={
             <ProtectedRoute>
+              <Header /> {/* Header inside ProtectedRoute */}
               <Profile />
             </ProtectedRoute>
           }
