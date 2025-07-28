@@ -74,21 +74,32 @@ export const AuthAPI = {
 // Trip API
 // -------------------------
 export const TripAPI = {
-  // Create a new trip
+  // Create a new trip with enhanced fields
   createTrip: async (tripData) => {
     // Ensure dates are in ISO format
     const formattedData = {
       ...tripData,
-      arrival: new Date(tripData.arrival).toISOString(),
-      departure: new Date(tripData.departure).toISOString(),
+      arrival: tripData.arrival
+        ? new Date(tripData.arrival).toISOString()
+        : undefined,
+      departure: tripData.departure
+        ? new Date(tripData.departure).toISOString()
+        : undefined,
+      // memberEmails is already an array of strings from frontend, no change needed
+      // destination, description, is_public, cover_image_url, budget are passed as is
     };
 
     const res = await api.post("/trips/", formattedData);
     return res.data;
   },
-  inviteUser: async (tripId, identifier) => {
-    const res = await api.post(`/trips/${tripId}/invite`, { identifier });
-    return res.data; // ✅ axios auto-parses JSON
+
+  // Invite user by email
+  inviteUser: async (tripId, email) => {
+    // Changed identifier to email
+    const res = await api.post(`/trips/${tripId}/invite`, {
+      identifier: email,
+    }); // Backend expects 'identifier'
+    return res.data;
   },
 
   // Get a specific trip by ID
@@ -109,9 +120,8 @@ export const TripAPI = {
     return res.data;
   },
 
-  // Update trip details (owner only)
+  // Update trip details (owner only) with enhanced fields
   updateTrip: async (tripId, tripData) => {
-    // Ensure dates are in ISO format if provided
     const formattedData = { ...tripData };
     if (formattedData.arrival) {
       formattedData.arrival = new Date(formattedData.arrival).toISOString();
@@ -119,32 +129,36 @@ export const TripAPI = {
     if (formattedData.departure) {
       formattedData.departure = new Date(formattedData.departure).toISOString();
     }
+    // destination, description, is_public, cover_image_url, budget are passed as is
+    // memberEmails is not updated via this route, handled by invite/remove
 
     const res = await api.put(`/trips/${tripId}`, formattedData);
     return res.data;
   },
+
   getPendingInvites: async () => {
     const res = await api.get("/trips/pending-invites");
     console.log(res.data);
     return res.data;
   },
 
-  // Add user to trip (by user_id or username)
-  addUserToTrip: async (tripId, userData) => {
-    // userData can be { user_id: "..." } or { username: "..." }
-    const res = await api.post(`/trips/${tripId}/add-user`, userData);
+  // Add user to trip by email (backend now expects email)
+  addUserToTrip: async (tripId, email) => {
+    // Changed userData to email
+    const res = await api.post(`/trips/${tripId}/add-user`, { email }); // Send email
     return res.data;
   },
 
   // Remove user from trip (owner only)
   removeUserFromTrip: async (tripId, userId) => {
+    // userId is still the ObjectId string
     const res = await api.post(`/trips/${tripId}/remove-user`, {
       user_id: userId,
     });
     return res.data;
   },
 
-  // Search users by username (for adding to trips)
+  // Search users by username (for adding to trips) - kept as is for general search
   searchUsers: async (query) => {
     const res = await api.get(`/users/search?q=${encodeURIComponent(query)}`);
     return res.data;
@@ -160,15 +174,16 @@ export const TripAPI = {
 // User API (if you need these)
 // -------------------------
 export const UserAPI = {
-  // Get user profile
+  // Get user profile - backend /auth/me returns full user object
   getProfile: async (userId) => {
-    const res = await api.get(`/users/${userId}`);
+    // This might be redundant if /auth/me is used for current user
+    const res = await api.get(`/users/${userId}`); // Assuming a /users/<id> route exists
     return res.data;
   },
 
   // Update user profile
   updateProfile: async (userData) => {
-    const res = await api.put("/users/profile", userData);
+    const res = await api.put("/users/profile", userData); // Assuming a /users/profile route exists
     return res.data;
   },
 
@@ -236,9 +251,19 @@ export default api;
 // Event API
 // -------------------------
 export const EventAPI = {
-  // Create a new event for a specific trip
+  // Create a new event for a specific trip with enhanced fields
   createEvent: async (tripId, eventData) => {
-    const res = await api.post(`/events/${tripId}`, eventData);
+    const formattedData = {
+      ...eventData,
+      start_time: eventData.start_time
+        ? new Date(eventData.start_time).toISOString()
+        : undefined,
+      end_time: eventData.end_time
+        ? new Date(eventData.end_time).toISOString()
+        : undefined,
+      // type, notes, participants, cost, status are passed as is
+    };
+    const res = await api.post(`/events/${tripId}`, formattedData);
     return res.data;
   },
 
@@ -248,9 +273,20 @@ export const EventAPI = {
     return res.data;
   },
 
-  // Update a specific event
+  // Update a specific event with enhanced fields
   updateEvent: async (eventId, eventData) => {
-    const res = await api.put(`/events/event/${eventId}`, eventData);
+    const formattedData = { ...eventData };
+    if (formattedData.start_time) {
+      formattedData.start_time = new Date(
+        formattedData.start_time
+      ).toISOString();
+    }
+    if (formattedData.end_time) {
+      formattedData.end_time = new Date(formattedData.end_time).toISOString();
+    }
+    // type, notes, participants, cost, status are passed as is
+
+    const res = await api.put(`/events/event/${eventId}`, formattedData);
     return res.data;
   },
 
