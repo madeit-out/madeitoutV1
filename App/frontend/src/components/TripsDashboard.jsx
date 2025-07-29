@@ -5,7 +5,7 @@ import { useUser } from "../context/UserContext";
 import ProfileButton from "./ProfileButton"; // ProfileButton (assuming it's still used elsewhere if uncommented)
 // REMOVED: import TripDetailsModal from "./TripDetailsModal";
 
-export default function Dashboard() {
+export default function Dashboard({ refreshTrigger, onTripChange }) { // Accept refreshTrigger and onTripChange
   const { user, loadingUser } = useUser();
   const navigate = useNavigate();
 
@@ -14,9 +14,12 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
-  // REMOVED: State for the TripDetailsModal
-  // const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  // const [selectedTrip, setSelectedTrip] = useState(null);
+  // --- DEBUG LOGS FOR DASHBOARD START ---
+  console.log("Dashboard Render: user =", user);
+  console.log("Dashboard Render: loadingUser (from context) =", loadingUser);
+  console.log("Dashboard Render: loading (Dashboard's own state) =", loading);
+  console.log("Dashboard Render: error (Dashboard's own state) =", error);
+  // --- DEBUG LOGS FOR DASHBOARD END ---
 
   const fetchTrips = async () => {
     try {
@@ -38,8 +41,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     const loadDashboardData = async () => {
+      console.log("Dashboard useEffect: loadDashboardData called.");
+      console.log("Dashboard useEffect: current loadingUser =", loadingUser);
+      console.log("Dashboard useEffect: current user =", user);
+
       // Phase 1: Waiting for user context to load
       if (loadingUser) {
+        console.log("Dashboard useEffect: User context still loading, setting Dashboard loading to true.");
         setLoading(true); // Keep dashboard in loading state while user context loads
         return;
       }
@@ -47,7 +55,7 @@ export default function Dashboard() {
       // Phase 2: User context has loaded
       if (!user) {
         // User is not authenticated after loading, so no trips to fetch.
-        // Set loading to false and ensure trips are empty.
+        console.log("Dashboard useEffect: User is null after context loaded. Setting Dashboard loading to false, trips empty, error.");
         setLoading(false);
         setTrips([]);
         setError("Please sign in to view your trips."); // Optional: set a specific error
@@ -55,27 +63,21 @@ export default function Dashboard() {
       }
 
       // Phase 3: User is authenticated, proceed to fetch trips
+      console.log("Dashboard useEffect: User is authenticated. Proceeding to fetch trips.");
       setLoading(true); // Set loading specifically for trip data fetch
       try {
         await fetchTrips();
+        console.log("Dashboard useEffect: fetchTrips completed successfully.");
+      } catch (e) {
+        console.error("Dashboard useEffect: fetchTrips failed in useEffect:", e);
       } finally {
         setLoading(false); // Always set loading to false after fetch attempt
+        console.log("Dashboard useEffect: Setting Dashboard loading to false (finally block).");
       }
     };
 
     loadDashboardData();
-  }, [user, loadingUser]); // Depend on user and loadingUser
-
-  // REMOVED: Functions to open and close the details modal
-  // const openDetailsModal = (trip) => {
-  //   setSelectedTrip(trip);
-  //   setIsDetailsModalOpen(true);
-  // };
-
-  // const closeDetailsModal = () => {
-  //   setIsDetailsModalOpen(false);
-  //   setSelectedTrip(null); // Clear selected trip when closing
-  // };
+  }, [user, loadingUser, refreshTrigger]); // Depend on user and loadingUser, refreshTrigger
 
   if (loading) {
     return (
@@ -336,12 +338,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* REMOVED: Trip Details Modal */}
-      {/* <TripDetailsModal
-        isOpen={isDetailsModalOpen}
-        onClose={closeDetailsModal}
-        trip={selectedTrip}
-      /> */}
+     
     </div>
   );
 }

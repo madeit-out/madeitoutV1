@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import React, { useState } from 'react'; // Import useState
 
 import "./App.css";
 import Home from "./components/Home";
@@ -9,24 +10,33 @@ import CreateTrip from "./components/CreateTrip";
 import Itinerary from "./components/Intinerary"; // Corrected spelling from Intinerary to Itinerary
 import Profile from "./components/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Header from "./components/Header"; // Import the Header component
+import Header from "./components/Header";
+import { UserProvider } from './context/UserContext';
 
 function App() {
+  // State to trigger dashboard refresh
+  const [dashboardRefreshTrigger, setDashboardRefreshTrigger] = useState(0);
+
+  // Function to increment the trigger, forcing dashboard to refresh
+  const triggerDashboardRefresh = () => {
+    setDashboardRefreshTrigger(prev => prev + 1);
+  };
+
   return (
-    <>
-      {/* The Header component is now rendered inside each ProtectedRoute */}
+    <UserProvider>
+      <Header />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/signin" element={<SignIn />} />
-        <Route path="/signup" element={<SignUp />} />
+        <Route path="/signup" element={<SignUp />}/>
 
         {/* Protected routes */}
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Header /> {/* Header inside ProtectedRoute */}
-              <Dashboard />
+              {/* Pass the trigger and the function to Dashboard */}
+              <Dashboard refreshTrigger={dashboardRefreshTrigger} onTripChange={triggerDashboardRefresh} />
             </ProtectedRoute>
           }
         />
@@ -35,8 +45,8 @@ function App() {
           path="/create-trip"
           element={
             <ProtectedRoute>
-              <Header /> {/* Header inside ProtectedRoute */}
-              <CreateTrip />
+              {/* Pass the trigger function to CreateTrip */}
+              <CreateTrip onTripCreated={triggerDashboardRefresh} />
             </ProtectedRoute>
           }
         />
@@ -44,8 +54,8 @@ function App() {
           path="/trips/:tripId/itinerary"
           element={
             <ProtectedRoute>
-              <Header /> {/* Header inside ProtectedRoute */}
-              <Itinerary />
+              {/* Itinerary can also trigger dashboard refresh if events affect trip status */}
+              <Itinerary onTripChange={triggerDashboardRefresh} />
             </ProtectedRoute>
           }
         />
@@ -53,13 +63,13 @@ function App() {
           path="/profile"
           element={
             <ProtectedRoute>
-              <Header /> {/* Header inside ProtectedRoute */}
-              <Profile />
+              {/* Profile needs to trigger dashboard refresh after accepting invites */}
+              <Profile onInviteAccepted={triggerDashboardRefresh} />
             </ProtectedRoute>
           }
         />
       </Routes>
-    </>
+    </UserProvider>
   );
 }
 

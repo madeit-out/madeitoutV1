@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthAPI } from '../adapters/apiAdapter';
+import UnauthenticatedHeader from "./UnauthenticatedHeader"
 
 function SignUp() {
   const navigate = useNavigate();
@@ -33,6 +34,8 @@ function SignUp() {
 
   return (
     // Main container: Dark gradient background
+    <>
+    < UnauthenticatedHeader />
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#01374A] to-[#012A3D] p-6">
       {/* Form Card: Darker Ocean Blue background, softer rounded corners, modern shadow, white text */}
       <div className="w-full max-w-md bg-[#012A3D] p-8 rounded-2xl shadow-xl text-white">
@@ -52,7 +55,7 @@ function SignUp() {
               className="w-full px-4 py-3 bg-[#01374A] text-white placeholder-gray-400 border border-[#72ADBF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0395A7]"
               placeholder="yourusername"
               required
-            />
+              />
           </div>
 
           <div>
@@ -65,7 +68,7 @@ function SignUp() {
               className="w-full px-4 py-3 bg-[#01374A] text-white placeholder-gray-400 border border-[#72ADBF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0395A7]"
               placeholder="you@example.com"
               required
-            />
+              />
           </div>
 
           <div>
@@ -78,7 +81,7 @@ function SignUp() {
               className="w-full px-4 py-3 bg-[#01374A] text-white placeholder-gray-400 border border-[#72ADBF] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0395A7]"
               placeholder="••••••••"
               required
-            />
+              />
           </div>
 
           {error && <p className="text-red-400 text-sm mt-2">{error}</p>} {/* Error color */}
@@ -87,12 +90,12 @@ function SignUp() {
           <button
             type="submit"
             className="w-full text-white text-lg font-semibold uppercase
-                       py-3 px-6 rounded-lg border border-[#0395A7]
-                       bg-[#0395A7] hover:bg-[#5E877D]
-                       transition-all duration-300 ease-in-out
-                       shadow-md hover:shadow-lg transform hover:scale-105
-                       focus:outline-none focus:ring-2 focus:ring-[#72ADBF] mt-6"
-          >
+            py-3 px-6 rounded-lg border border-[#0395A7]
+            bg-[#0395A7] hover:bg-[#5E877D]
+            transition-all duration-300 ease-in-out
+            shadow-md hover:shadow-lg transform hover:scale-105
+            focus:outline-none focus:ring-2 focus:ring-[#72ADBF] mt-6"
+            >
             Create Account
           </button>
         </form>
@@ -103,6 +106,8 @@ function SignUp() {
         </p>
       </div>
     </div>
+    
+  </>
   );
 }
 
