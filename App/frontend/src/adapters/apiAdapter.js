@@ -4,7 +4,7 @@ import axios from "axios";
 
 // Create the base axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:5000",
+  baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:5000/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -68,6 +68,11 @@ export const AuthAPI = {
   logout: () => {
     localStorage.removeItem("token");
   },
+
+  updateProfile: async (userData) => {
+    const res = await api.put("/auth/me", userData);
+    return res.data;
+  },
 };
 
 // -------------------------
@@ -85,8 +90,6 @@ export const TripAPI = {
       departure: tripData.departure
         ? new Date(tripData.departure).toISOString()
         : undefined,
-      // memberEmails is already an array of strings from frontend, no change needed
-      // destination, description, is_public, cover_image_url, budget are passed as is
     };
 
     const res = await api.post("/trips/", formattedData);
@@ -138,7 +141,6 @@ export const TripAPI = {
 
   getPendingInvites: async () => {
     const res = await api.get("/trips/pending-invites");
-    console.log(res.data);
     return res.data;
   },
 
@@ -195,64 +197,12 @@ export const UserAPI = {
 };
 
 // -------------------------
-// Utility functions
-// -------------------------
-export const ApiUtils = {
-  // Check if user is authenticated
-  isAuthenticated: () => {
-    return !!localStorage.getItem("token");
-  },
-
-  // Get current token
-  getToken: () => {
-    return localStorage.getItem("token");
-  },
-
-  // Format error message for display
-  formatError: (error) => {
-    if (error.response?.data?.error) {
-      return error.response.data.error;
-    }
-    if (error.message) {
-      return error.message;
-    }
-    return "An unexpected error occurred";
-  },
-
-  // Handle API errors consistently
-  handleError: (error, fallbackMessage = "An error occurred") => {
-    console.error("API Error:", error);
-
-    if (error.response?.status === 401) {
-      // Already handled by interceptor
-      return "Session expired. Please log in again.";
-    }
-
-    if (error.response?.status === 403) {
-      return "You don't have permission to perform this action.";
-    }
-
-    if (error.response?.status === 404) {
-      return "The requested resource was not found.";
-    }
-
-    if (error.response?.status >= 500) {
-      return "Server error. Please try again later.";
-    }
-
-    return ApiUtils.formatError(error) || fallbackMessage;
-  },
-};
-
-// Export default api instance for custom requests
-export default api;
-
-// -------------------------
 // Event API
 // -------------------------
 export const EventAPI = {
   // Create a new event for a specific trip with enhanced fields
   createEvent: async (tripId, eventData) => {
+    // NOTE: Added tripId here
     const formattedData = {
       ...eventData,
       start_time: eventData.start_time
@@ -263,6 +213,7 @@ export const EventAPI = {
         : undefined,
       // type, notes, participants, cost, status are passed as is
     };
+    // FIX: The backend route expects a tripId in the URL, so we pass it here.
     const res = await api.post(`/events/${tripId}`, formattedData);
     return res.data;
   },

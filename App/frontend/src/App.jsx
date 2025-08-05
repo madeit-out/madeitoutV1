@@ -1,52 +1,52 @@
 import { Routes, Route } from "react-router-dom";
-import React, { useState } from 'react'; // Import useState
+import { useState } from "react";
 
 import "./App.css";
-import Home from "./components/Home";
-import SignIn from "./components/SignIn";
-import SignUp from "./components/SignUp";
-import Dashboard from "./components/TripsDashboard";
-import CreateTrip from "./components/CreateTrip";
-import Itinerary from "./components/Intinerary"; // Corrected spelling from Intinerary to Itinerary
-import Profile from "./components/Profile";
+// Import Page components
+import HomePage from "./pages/HomePage";
+import SigninPage from "./pages/SigninPage";
+import SignupPage from "./pages/SignupPage";
+import DashboardPage from "./pages/DashboardPage";
+import CreateTripPage from "./pages/CreateTripPage";
+import ItineraryPage from "./pages/ItineraryPage";
+import ProfilePage from "./pages/ProfilePage";
+import FlightSearchPage from "./pages/FlightSearchPage";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Header from "./components/Header";
-import { UserProvider } from './context/UserContext';
+
+import { UserProvider } from "./context/UserContext";
 
 function App() {
-  // State to trigger dashboard refresh
   const [dashboardRefreshTrigger, setDashboardRefreshTrigger] = useState(0);
 
-  // Function to increment the trigger, forcing dashboard to refresh
   const triggerDashboardRefresh = () => {
-    setDashboardRefreshTrigger(prev => prev + 1);
+    setDashboardRefreshTrigger((prev) => prev + 1);
   };
 
   return (
     <UserProvider>
-      <Header />
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/signup" element={<SignUp />}/>
+        {/* Public routes */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/signin" element={<SigninPage />} />
+        <Route path="/signup" element={<SignupPage />} />
 
-        {/* Protected routes */}
+        {/* Protected routes are now individually wrapped */}
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
-              {/* Pass the trigger and the function to Dashboard */}
-              <Dashboard refreshTrigger={dashboardRefreshTrigger} onTripChange={triggerDashboardRefresh} />
+              <DashboardPage
+                refreshTrigger={dashboardRefreshTrigger}
+                onTripChange={triggerDashboardRefresh}
+              />
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/create-trip"
           element={
             <ProtectedRoute>
-              {/* Pass the trigger function to CreateTrip */}
-              <CreateTrip onTripCreated={triggerDashboardRefresh} />
+              <CreateTripPage onTripCreated={triggerDashboardRefresh} />
             </ProtectedRoute>
           }
         />
@@ -54,8 +54,7 @@ function App() {
           path="/trips/:tripId/itinerary"
           element={
             <ProtectedRoute>
-              {/* Itinerary can also trigger dashboard refresh if events affect trip status */}
-              <Itinerary onTripChange={triggerDashboardRefresh} />
+              <ItineraryPage onTripChange={triggerDashboardRefresh} />
             </ProtectedRoute>
           }
         />
@@ -63,11 +62,11 @@ function App() {
           path="/profile"
           element={
             <ProtectedRoute>
-              {/* Profile needs to trigger dashboard refresh after accepting invites */}
-              <Profile onInviteAccepted={triggerDashboardRefresh} />
+              <ProfilePage onInviteAccepted={triggerDashboardRefresh} />
             </ProtectedRoute>
           }
         />
+        {/* <Route path="/search-flights" element={<FlightSearchPage />} /> */}
       </Routes>
     </UserProvider>
   );

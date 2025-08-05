@@ -2,30 +2,21 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TripAPI } from "../adapters/apiAdapter";
 import { useUser } from "../context/UserContext";
-import ProfileButton from "./ProfileButton"; // ProfileButton (assuming it's still used elsewhere if uncommented)
-// REMOVED: import TripDetailsModal from "./TripDetailsModal";
 
-export default function Dashboard({ refreshTrigger, onTripChange }) { // Accept refreshTrigger and onTripChange
+export default function Dashboard({ refreshTrigger }) {
   const { user, loadingUser } = useUser();
   const navigate = useNavigate();
 
   const [trips, setTrips] = useState([]);
-  const [loading, setLoading] = useState(true); // Initial loading state for the dashboard
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
-  // --- DEBUG LOGS FOR DASHBOARD START ---
-  console.log("Dashboard Render: user =", user);
-  console.log("Dashboard Render: loadingUser (from context) =", loadingUser);
-  console.log("Dashboard Render: loading (Dashboard's own state) =", loading);
-  console.log("Dashboard Render: error (Dashboard's own state) =", error);
-  // --- DEBUG LOGS FOR DASHBOARD END ---
-
   const fetchTrips = async () => {
     try {
+      setError(""); // Clear previous errors before fetching
       const data = await TripAPI.getUserTrips();
       setTrips(data);
-      setError("");
     } catch (err) {
       console.error("Error fetching trips:", err);
       setError("Failed to load trips. Please try again.");
@@ -40,48 +31,29 @@ export default function Dashboard({ refreshTrigger, onTripChange }) { // Accept 
   };
 
   useEffect(() => {
-    const loadDashboardData = async () => {
-      console.log("Dashboard useEffect: loadDashboardData called.");
-      console.log("Dashboard useEffect: current loadingUser =", loadingUser);
-      console.log("Dashboard useEffect: current user =", user);
+    // If the user context is still loading, we don't need to do anything yet.
+    // The main loading check below will handle showing the spinner.
+    if (loadingUser) {
+      return;
+    }
 
-      // Phase 1: Waiting for user context to load
-      if (loadingUser) {
-        console.log("Dashboard useEffect: User context still loading, setting Dashboard loading to true.");
-        setLoading(true); // Keep dashboard in loading state while user context loads
-        return;
-      }
-
-      // Phase 2: User context has loaded
-      if (!user) {
-        // User is not authenticated after loading, so no trips to fetch.
-        console.log("Dashboard useEffect: User is null after context loaded. Setting Dashboard loading to false, trips empty, error.");
+    // If the context has finished loading AND we have a valid user, fetch their trips.
+    if (user) {
+      setLoading(true);
+      fetchTrips().finally(() => {
         setLoading(false);
-        setTrips([]);
-        setError("Please sign in to view your trips."); // Optional: set a specific error
-        return;
-      }
+      });
+    } else {
+      // If the context has finished loading and there is NO user,
+      // it means they are logged out. We can stop the loading spinner.
+      setLoading(false);
+      setTrips([]); // Ensure no old trip data is shown
+    }
+  }, [user, loadingUser, refreshTrigger]);
 
-      // Phase 3: User is authenticated, proceed to fetch trips
-      console.log("Dashboard useEffect: User is authenticated. Proceeding to fetch trips.");
-      setLoading(true); // Set loading specifically for trip data fetch
-      try {
-        await fetchTrips();
-        console.log("Dashboard useEffect: fetchTrips completed successfully.");
-      } catch (e) {
-        console.error("Dashboard useEffect: fetchTrips failed in useEffect:", e);
-      } finally {
-        setLoading(false); // Always set loading to false after fetch attempt
-        console.log("Dashboard useEffect: Setting Dashboard loading to false (finally block).");
-      }
-    };
-
-    loadDashboardData();
-  }, [user, loadingUser, refreshTrigger]); // Depend on user and loadingUser, refreshTrigger
-
-  if (loading) {
+  // Show a loading spinner if the user context is loading OR if trips are being fetched.
+  if (loadingUser || loading) {
     return (
-      // Loading state: Centered, dark background text
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#01374A] to-[#012A3D]">
         <div className="flex flex-col items-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-[#72ADBF]"></div>
@@ -93,30 +65,18 @@ export default function Dashboard({ refreshTrigger, onTripChange }) { // Accept 
     );
   }
 
+  // Show an error message only if a network error occurred during fetching.
   if (error) {
     return (
-      // Error state: Centered, dark background text, updated button style
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#01374A] to-[#012A3D]">
         <div className="text-center p-8 rounded-xl bg-[#012A3D] shadow-xl">
           <p className="text-red-400 mb-6 text-lg">{error}</p>
           <button
             onClick={handleRefresh}
-            className="text-[#72ADBF] text-lg font-semibold uppercase
-                       py-3 px-8 rounded-lg border border-[#72ADBF]
-                       hover:text-white hover:bg-[#0395A7] hover:bg-opacity-20
-                       transition-all duration-300 ease-in-out
-                       focus:outline-none focus:ring-2 focus:ring-[#72ADBF]
-                       disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-[#72ADBF] text-lg font-semibold uppercase py-3 px-8 rounded-lg border border-[#72ADBF] hover:text-white hover:bg-[#0395A7] hover:bg-opacity-20 transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#72ADBF] disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={refreshing}
           >
-            {refreshing ? (
-              <div className="flex justify-center items-center space-x-2">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>Refreshing</span>
-              </div>
-            ) : (
-              "Try Again"
-            )}
+            {refreshing ? "Refreshing..." : "Try Again"}
           </button>
         </div>
       </div>
@@ -133,16 +93,7 @@ export default function Dashboard({ refreshTrigger, onTripChange }) { // Accept 
   const formatDateRange = (arrival, departure) => {
     const arrivalDate = new Date(arrival);
     const departureDate = new Date(departure);
-
-    const options = {
-      month: "short",
-      day: "numeric",
-      year:
-        arrivalDate.getFullYear() !== new Date().getFullYear()
-          ? "numeric"
-          : undefined,
-    };
-
+    const options = { month: "short", day: "numeric" };
     return `${arrivalDate.toLocaleDateString(
       "en-US",
       options
@@ -152,7 +103,6 @@ export default function Dashboard({ refreshTrigger, onTripChange }) { // Accept 
   const getDaysUntil = (date) => {
     const diffTime = new Date(date) - now;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "Tomorrow";
     if (diffDays > 1) return `In ${diffDays} days`;
@@ -160,48 +110,60 @@ export default function Dashboard({ refreshTrigger, onTripChange }) { // Accept 
   };
 
   const renderTripCard = (trip, showCountdown = false) => (
-    // Trip Card: Darker Ocean Blue background, rounded-xl, subtle shadow, white/gray text
     <li
       key={trip._id}
-      className="bg-[#012A3D] p-6 rounded-xl shadow-lg border border-[#01374A] hover:shadow-xl transition-shadow"
+      className="bg-[#012A3D] rounded-xl shadow-lg border border-[#01374A] hover:shadow-xl transition-shadow overflow-hidden"
     >
-      <div className="flex justify-between items-start">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-[#72ADBF] text-lg truncate mb-1">
-            {" "}
-            {/* Accent color for title */}
-            {trip.title}
-          </h3>
-          <p className="text-sm text-gray-300 mt-1">
-            {" "}
-            {/* Lighter gray for dates */}
-            {formatDateRange(trip.arrival, trip.departure)}
-          </p>
+      {trip.cover_image_url ? (
+        <img
+          src={trip.cover_image_url}
+          alt={`${trip.title} cover`}
+          className="w-full h-32 object-cover"
+        />
+      ) : (
+        <div className="w-full h-32 bg-gradient-to-r from-[#0395A7] to-[#72ADBF] opacity-20"></div>
+      )}
+      <div className="p-6">
+        <div className="flex justify-between items-start">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-[#72ADBF] text-lg truncate mb-1">
+              {trip.title}
+            </h3>
+            {trip.destination && (
+              <p className="text-sm text-gray-300 truncate">
+                {trip.destination}
+              </p>
+            )}
+            <p className="text-sm text-gray-400 mt-2">
+              {formatDateRange(trip.arrival, trip.departure)}
+            </p>
+          </div>
+          <div className="ml-4 flex flex-col space-y-3 items-end">
+            <span
+              title={trip.is_public ? "Public Trip" : "Private Trip"}
+              className="text-lg"
+            >
+              {trip.is_public ? "🌐" : "🔒"}
+            </span>
+            <button
+              onClick={() => navigate(`/trips/${trip._id}/itinerary`)}
+              className="text-sm text-[#72ADBF] hover:text-white font-medium hover:underline transition-colors"
+            >
+              Itinerary
+            </button>
+          </div>
+        </div>
+        <div className="mt-4 flex justify-between items-center text-xs text-gray-400">
+          <span>
+            {trip.members_info?.length || 1} member
+            {(trip.members_info?.length || 1) !== 1 ? "s" : ""}
+          </span>
+          {trip.budget && <span>Budget: ${trip.budget.toLocaleString()}</span>}
           {showCountdown && (
-            <p className="text-sm text-[#0395A7] mt-2 font-medium">
-              {" "}
-              {/* Bright cyan for countdown */}
+            <p className="text-sm text-[#0395A7] font-medium">
               {getDaysUntil(trip.arrival)}
             </p>
           )}
-          <p className="text-xs text-gray-400 mt-2">
-            {" "}
-            {/* Grayer for members */}
-            {trip.members_info?.length || 1} member
-            {(trip.members_info?.length || 1) !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <div className="ml-4 flex flex-col space-y-2 items-end">
-          {" "}
-          {/* Increased space-y */}
-          {/* REMOVED: View Details Button */}
-          {/* Itinerary Button: Accent color text, subtle hover underline */}
-          <button
-            onClick={() => navigate(`/trips/${trip._id}/itinerary`)}
-            className="text-sm text-[#72ADBF] hover:text-white font-medium hover:underline transition-colors"
-          >
-            Itinerary
-          </button>
         </div>
       </div>
     </li>
@@ -209,46 +171,27 @@ export default function Dashboard({ refreshTrigger, onTripChange }) { // Accept 
 
   const renderSection = (title, tripList, showCountdown = false) => {
     if (tripList.length === 0) return null;
-
     return (
       <section className="mb-10">
-        {" "}
-        {/* Increased mb */}
         <div className="flex justify-between items-center mb-5">
-          {" "}
-          {/* Increased mb */}
-          <h2 className="text-xl font-medium text-[#72ADBF]">{title}</h2>{" "}
-          {/* Accent color for section titles */}
+          <h2 className="text-xl font-medium text-[#72ADBF]">{title}</h2>
           <span className="text-sm text-gray-300 bg-[#01374A] px-3 py-1 rounded-full">
-            {" "}
-            {/* Darker background for count */}
             {tripList.length}
           </span>
         </div>
         <ul className="space-y-4">
-          {" "}
-          {/* Increased space-y */}
           {tripList.map((trip) => renderTripCard(trip, showCountdown))}
         </ul>
       </section>
     );
   };
 
-  const hasAnyTrips = trips.length > 0;
-
   return (
-    // Main container: Dark background, generous padding
     <div className="min-h-screen bg-gradient-to-br from-[#01374A] to-[#012A3D] text-white py-12 px-6">
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          {" "}
-          {/* Increased mb */}
-          <h1 className="text-3xl font-bold text-[#72ADBF]">Your Trips</h1>{" "}
-          {/* Larger, accent-colored heading */}
+          <h1 className="text-3xl font-bold text-[#72ADBF]">Your Trips</h1>
           <div className="flex space-x-4 items-center">
-            {" "}
-            {/* Increased space-x */}
-            {/* Refresh Button: Subtle icon button */}
             <button
               onClick={handleRefresh}
               className="text-xl text-gray-400 hover:text-white transition flex items-center justify-center w-8 h-8 rounded-full hover:bg-[#0395A7] hover:bg-opacity-20"
@@ -261,45 +204,27 @@ export default function Dashboard({ refreshTrigger, onTripChange }) { // Accept 
                 <span>↻</span>
               )}
             </button>
-            {/* New Trip Button: Primary style */}
             <button
               onClick={() => navigate("/create-trip")}
-              className="text-white text-lg font-semibold uppercase
-                         py-3 px-6 rounded-lg border border-[#0395A7]
-                         bg-[#0395A7] hover:bg-[#5E877D]
-                         transition-all duration-300 ease-in-out
-                         shadow-md hover:shadow-lg transform hover:scale-105
-                         focus:outline-none focus:ring-2 focus:ring-[#72ADBF]
-                         text-sm" // Kept text-sm for consistency with other buttons
+              className="text-white text-sm font-semibold uppercase py-3 px-6 rounded-lg bg-[#0395A7] hover:bg-[#5E877D] transition-all duration-300 ease-in-out shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#72ADBF]"
             >
               + New Trip
             </button>
-            {/* Profile Button: Assuming it's added here as well, if not, you can add it */}
-            {/* <div className="ml-auto">
-              <ProfileButton />
-            </div> */}
           </div>
         </div>
 
-        {hasAnyTrips ? (
+        {trips.length > 0 ? (
           <>
             {renderSection("Active Trips", active)}
             {renderSection("Upcoming Trips", upcoming, true)}
             {renderSection("Past Trips", past)}
           </>
         ) : (
-          // No trips state: Darker background, updated text and button
           <div className="text-center mt-20">
-            {" "}
-            {/* Increased mt */}
             <div className="bg-[#012A3D] rounded-xl p-10 shadow-xl">
-              {" "}
-              {/* Darker background, more padding */}
               <div className="mb-6">
-                {" "}
-                {/* Increased mb */}
                 <svg
-                  className="mx-auto h-16 w-16 text-[#72ADBF]" // Larger, accent color icon
+                  className="mx-auto h-16 w-16 text-[#72ADBF]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 48 48"
@@ -313,23 +238,14 @@ export default function Dashboard({ refreshTrigger, onTripChange }) { // Accept 
                 </svg>
               </div>
               <h3 className="text-xl font-bold text-[#72ADBF] mb-3">
-                {" "}
-                {/* Accent color for heading */}
                 No trips yet
               </h3>
               <p className="text-gray-300 mb-8">
-                {" "}
-                {/* Lighter gray for paragraph */}
                 Start planning your next adventure by creating your first trip.
               </p>
               <button
                 onClick={() => navigate("/create-trip")}
-                className="text-white text-lg font-semibold uppercase
-                           py-3 px-8 rounded-lg border border-[#0395A7]
-                           bg-[#0395A7] hover:bg-[#5E877D]
-                           transition-all duration-300 ease-in-out
-                           shadow-md hover:shadow-lg transform hover:scale-105
-                           focus:outline-none focus:ring-2 focus:ring-[#72ADBF]"
+                className="text-white text-lg font-semibold uppercase py-3 px-8 rounded-lg bg-[#0395A7] hover:bg-[#5E877D] transition-all duration-300 ease-in-out shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#72ADBF]"
               >
                 Plan Your First Trip
               </button>
@@ -337,8 +253,6 @@ export default function Dashboard({ refreshTrigger, onTripChange }) { // Accept 
           </div>
         )}
       </div>
-
-     
     </div>
   );
 }

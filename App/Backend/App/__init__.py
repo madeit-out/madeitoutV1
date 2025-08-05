@@ -7,6 +7,7 @@ from flask_bcrypt import Bcrypt
 
 from flask_jwt_extended import JWTManager
 from flask_socketio import SocketIO  # Import SocketIO
+from amadeus import Client
 
 # Initialize SocketIO globally, but without the app instance yet.
 # This instance will be initialized with the app inside create_app().
@@ -68,6 +69,15 @@ def create_app():
     app.config["SESSION_PERMANENT"] = False
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")  # add to .env
 
+
+    try:
+        app.amadeus = Client(
+            client_id=os.getenv("AMADEUS_CLIENT_ID"),
+            client_secret=os.getenv("AMADEUS_CLIENT_SECRET"),
+        )
+    except Exception as e:
+        print(f"Failed to initialize Amadeus client: {e}")
+        app.amadeus = None
     # Apply CORS globally for HTTP requests
     CORS(
         app,
@@ -98,6 +108,7 @@ def create_app():
     from .routes.auth import auth_bp
     from .routes.trips import trips_bp
     from .routes.events import events_bp
+    from .routes.booking import booking_bp # <<< Import the new booking blueprint
 
     # CRUCIAL: Simply import the sockets module here.
     # This import will cause the module to be executed, and its @socketio.on decorators
@@ -109,6 +120,8 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(trips_bp, url_prefix="/api/trips")
     app.register_blueprint(events_bp, url_prefix="/api/events")
+    app.register_blueprint(booking_bp, url_prefix="/api/booking") # <<< Register the blueprint
+
 
     # Return both the Flask app and the global socketio instance
     return app, socketio
