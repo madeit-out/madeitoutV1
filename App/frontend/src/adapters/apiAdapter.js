@@ -165,6 +165,10 @@ export const TripAPI = {
     const res = await api.get(`/users/search?q=${encodeURIComponent(query)}`);
     return res.data;
   },
+  deleteTrip: async (tripId) => {
+    const res = await api.delete(`/trips/${tripId}`);
+    return res.data;
+  },
 
   acceptInvite: async (tripId) => {
     const res = await api.post(`/trips/${tripId}/accept-invite`);
@@ -200,48 +204,18 @@ export const UserAPI = {
 // Event API
 // -------------------------
 export const EventAPI = {
-  // Create a new event for a specific trip with enhanced fields
   createEvent: async (tripId, eventData) => {
-    // NOTE: Added tripId here
-    const formattedData = {
-      ...eventData,
-      start_time: eventData.start_time
-        ? new Date(eventData.start_time).toISOString()
-        : undefined,
-      end_time: eventData.end_time
-        ? new Date(eventData.end_time).toISOString()
-        : undefined,
-      // type, notes, participants, cost, status are passed as is
-    };
-    // FIX: The backend route expects a tripId in the URL, so we pass it here.
-    const res = await api.post(`/events/${tripId}`, formattedData);
+    const res = await api.post("/events/", { ...eventData, trip_id: tripId });
     return res.data;
   },
-
-  // Get all events for a specific trip
   getTripEvents: async (tripId) => {
     const res = await api.get(`/events/${tripId}`);
     return res.data;
   },
-
-  // Update a specific event with enhanced fields
   updateEvent: async (eventId, eventData) => {
-    const formattedData = { ...eventData };
-    if (formattedData.start_time) {
-      formattedData.start_time = new Date(
-        formattedData.start_time
-      ).toISOString();
-    }
-    if (formattedData.end_time) {
-      formattedData.end_time = new Date(formattedData.end_time).toISOString();
-    }
-    // type, notes, participants, cost, status are passed as is
-
-    const res = await api.put(`/events/event/${eventId}`, formattedData);
+    const res = await api.put(`/events/event/${eventId}`, eventData);
     return res.data;
   },
-
-  // Delete a specific event
   deleteEvent: async (eventId) => {
     const res = await api.delete(`/events/event/${eventId}`);
     return res.data;

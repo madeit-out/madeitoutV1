@@ -1,7 +1,8 @@
-// socketAdapters.js
+// socketAdapters.js - Enhanced debugging version
 import { io } from "socket.io-client";
 
 const URL = import.meta.env.VITE_SOCKET_URL || "http://127.0.0.1:5000";
+console.log("🔍 Socket URL:", URL);
 
 let socket = null;
 let listeners = {
@@ -15,16 +16,31 @@ let listeners = {
 export const ChatSocket = {
   connect: () => {
     const token = localStorage.getItem("token");
-    if (!token || (socket && socket.connected)) return;
+    console.log("🔑 Token exists:", !!token);
+    console.log("🔌 Socket exists and connected:", socket?.connected);
+    
+    if (!token) {
+      console.error("❌ No token found in localStorage");
+      return;
+    }
+    
+    if (socket && socket.connected) {
+      console.log("✅ Already connected, skipping");
+      return;
+    }
 
+    console.log("🚀 Attempting to connect to:", `${URL}/chat`);
+    
     socket = io(`${URL}/chat`, {
       auth: { token },
       transports: ["websocket"],
       reconnectionAttempts: 5,
+      timeout: 10000, // 10 second timeout
     });
 
+    // Add connection attempt logging
     socket.on("connect", () => {
-      console.log("✅ Socket connected:", socket.id);
+      console.log("✅ Socket connected successfully:", socket.id);
       if (listeners.connect) listeners.connect();
     });
 
@@ -34,11 +50,19 @@ export const ChatSocket = {
     });
 
     socket.on("connect_error", (err) => {
-      console.error("❌ Socket error:", err.message);
+      console.error("❌ Socket connection error:", err.message);
+      console.error("❌ Error details:", err);
       if (listeners.error) listeners.error(err);
     });
 
-    // ✅ Always attach message handlers, even if listener isn't set yet
+    // Add timeout handling
+    setTimeout(() => {
+      if (socket && !socket.connected) {
+        console.error("⏰ Socket connection timeout after 10 seconds");
+        if (listeners.disconnect) listeners.disconnect();
+      }
+    }, 10000);
+
     socket.on("chat message", (msg) => {
       console.log("📨 Received chat message:", msg);
       if (listeners.message) listeners.message(msg);
@@ -54,8 +78,10 @@ export const ChatSocket = {
       if (listeners.error) listeners.error(err);
     });
   },
+
   disconnect: () => {
     if (socket) {
+      console.log("🔌 Disconnecting socket");
       socket.disconnect();
       socket = null;
     }
@@ -63,16 +89,18 @@ export const ChatSocket = {
 
   joinRoom: (tripId) => {
     if (socket?.connected) {
+      console.log("🏠 Joining room:", tripId);
       socket.emit("joinTripRoom", tripId);
+    } else {
+      console.error("❌ Cannot join room - socket not connected");
     }
   },
 
   sendMessage: (tripId, text, senderId) => {
     if (!socket?.connected) {
-      console.warn("Socket not connected, message was not sent.");
+      console.warn("❌ Socket not connected, message was not sent.");
       return;
     }
-    // FIX: Uncomment this log to see the data being sent.
     console.log("✅ Emitting 'chat message' with data:", {
       tripId,
       text,
@@ -100,9 +128,6 @@ export const ChatSocket = {
   onHistoricalMessages: (callback) => {
     listeners.historical = callback;
     if (socket) socket.on("historical messages", callback);
-    // ChatSocket.onHistoricalMessages((msgs) => {
-    //   console.log("🕘 Received historical messages:", msgs); // ✅ confirms joined
-    // });
   },
 
   offHistoricalMessages: () => {

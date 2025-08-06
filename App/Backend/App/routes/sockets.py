@@ -10,17 +10,21 @@ class TripChatNamespace(Namespace):
     connected_users = {}
 
     def on_connect(self, auth):
+        print(f"🔍 Connection attempt received with auth: {auth}")
         try:
             token = auth.get("token") if auth else None
             if not token:
+                print("❌ No token provided")
                 return False
 
+            print(f"🔑 Attempting to decode token: {token[:50]}...")
             decoded_token = decode_token(token)
             user_id = decoded_token["sub"]
             self.connected_users[request.sid] = user_id
-            print(f"Client connected to /chat namespace: SID={request.sid}, User ID={user_id}")
+            print(f"✅ Client connected to /chat namespace: SID={request.sid}, User ID={user_id}")
+            return True  # Explicitly return True for successful connection
         except Exception as e:
-            print(f"SocketIO Connect: Authentication failed: {e}. Disconnecting.")
+            print(f"❌ SocketIO Connect: Authentication failed: {e}. Disconnecting.")
             return False
 
     def on_disconnect(self):

@@ -41,7 +41,7 @@ application <https://developers.amadeus.com/my-apps/>`__.
         response = amadeus.shopping.flight_offers_search.get(
             originLocationCode='MAD', 
             destinationLocationCode='ATH', 
-            departureDate='2024-11-01',
+            departureDate='2022-11-01',
             adults=1)
         print(response.data)
     except ResponseError as error:
@@ -275,21 +275,34 @@ List of supported endpoints
     # Hotel Name Autocomplete
     amadeus.reference_data.locations.hotel.get(keyword='PARI', subType=[Hotel.HOTEL_GDS, Hotel.HOTEL_LEISURE])
 
-    # Hotel Booking v2
-    # The offerId comes from the hotel_offer above
-    amadeus.booking.hotel_orders.post(
-        guests=guests, 
-        travel_agent=travel_agent,
-        room_associations=room_associations,
-        payment=payment)
-
-    # Hotel Booking v1
+    # Hotel Booking
     # The offerId comes from the hotel_offer above
     amadeus.booking.hotel_bookings.post(offerId, guests, payments)
 
     # Hotel Ratings
     # What travelers think about this hotel?
     amadeus.e_reputation.hotel_sentiments.get(hotelIds = 'ADNYCCTB')
+
+    # Points of Interest
+    # What are the popular places in Barcelona (based a geo location and a radius)
+    amadeus.reference_data.locations.points_of_interest.get(latitude=41.397158, longitude=2.160873)
+    # What are the popular places in Barcelona? (based on a square)
+    amadeus.reference_data.locations.points_of_interest.by_square.get(north=41.397158, west=2.160873,
+                                                                      south=41.394582, east=2.177181)
+    # Returns a single Point of Interest from a given id
+    amadeus.reference_data.locations.point_of_interest('9CB40CB5D0').get()
+
+    # Location Score
+    amadeus.location.analytics.category_rated_areas.get(latitude=41.397158, longitude=2.160873)
+
+    # Safe Place
+    # How safe is Barcelona? (based a geo location and a radius)
+    amadeus.safety.safety_rated_locations.get(latitude=41.397158, longitude=2.160873)
+    # How safe is Barcelona? (based on a square)
+    amadeus.safety.safety_rated_locations.by_square.get(north=41.397158, west=2.160873,
+                                                        south=41.394582, east=2.177181)
+    # What is the safety information of a location based on it's Id?
+    amadeus.safety.safety_rated_location('Q930400801').get()
 
     # Trip Purpose Prediction
     amadeus.travel.predictions.trip_purpose.get(originLocationCode='ATH', destinationLocationCode='MAD', departureDate='2022-11-01', returnDate='2022-11-08')
@@ -303,6 +316,14 @@ List of supported endpoints
 
     # Airport Routes
     amadeus.airport.direct_destinations.get(departureAirportCode='BLR')
+
+    # Trip Parser
+    # Encode to Base64 your booking confirmation file (.html, .eml, .pdf supported)
+    response = amadeus.travel.trip_parser.post(amadeus.travel.from_file(path_to_file))
+    # Alternatively you can use a Base64 encoded content directly
+    response = amadeus.travel.trip_parser.post(amadeus.travel.from_base64(base64))
+    # Or you can call the API with the JSON directly
+    response = amadeus.travel.trip_parser.post(body)
 
     # Travel Recommendations
     amadeus.reference_data.recommended_locations.get(cityCodes='PAR', travelerCountryCode='FR')

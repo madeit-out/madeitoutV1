@@ -62,6 +62,8 @@ def login():
     }), 200
 
 
+# In app/routes/auth.py
+
 @auth_bp.route("/me", methods=["GET"])
 @jwt_required()
 def get_current_user():
@@ -78,28 +80,30 @@ def get_current_user():
     try:
         pending_trip_ids = [ObjectId(tid) for tid in (user.pending_invitations or [])]
     except Exception:
-        return jsonify({"error": "Invalid trip ID in pending invitations"}), 400
+        pending_trip_ids = []
 
     pending_trips = list(db.trips.find({"_id": {"$in": pending_trip_ids}}))
 
     invite_details = []
     for trip in pending_trips:
         creator = db.users.find_one({"_id": trip.get("created_by")})
+        
+        # FIX: Use 'arrival' and 'departure', not 'start_date' and 'end_date'
         invite_details.append({
             "_id": str(trip["_id"]),
             "title": trip.get("title"),
             "destination": trip.get("destination"),
-            "start_date": trip.get("start_date").isoformat() if trip.get("start_date") else None,
-            "end_date": trip.get("end_date").isoformat() if trip.get("end_date") else None,
-            "created_by": str(trip.get("created_by")),
-            "created_by_username": creator.get("username", "Unknown") if creator else "Unknown"
+            "arrival": trip.get("arrival"),
+            "departure": trip.get("departure"),
+            "created_by_username": creator.get("username", "Unknown") if creator else "Unknown",
+            "cover_image_url": trip.get("cover_image_url")
         })
 
     user_json = user.to_dict()
+    # Send the detailed list to the frontend
     user_json["pending_invite_details"] = invite_details
 
     return jsonify(user_json), 200
-
 
 
 

@@ -13,47 +13,6 @@ from amadeus import Client
 # This instance will be initialized with the app inside create_app().
 socketio = SocketIO()
 
-
-# --- NEW GLOBAL CHAT MESSAGE LISTENER START ---
-@socketio.on("chat message")  # Catches the specific 'chat message' event globally
-def handle_global_chat_message(data):
-    print(
-        f"SocketIO Debug: GLOBAL listener received 'chat message' event with data: {data}"
-    )
-    # You would typically not process the message here if using a namespace,
-    # but for debugging, this confirms reception.
-
-
-# --- NEW GLOBAL CHAT MESSAGE LISTENER END ---
-
-
-@socketio.on("message")  # Catches generic 'message' events
-def handle_message(data):
-    print(f"SocketIO Debug: GLOBAL 'message' event received: {data}")
-
-
-@socketio.on("json")  # Catches generic 'json' events
-def handle_json(data):
-    print(f"SocketIO Debug: GLOBAL 'json' event received: {data}")
-
-
-@socketio.on_error()  # Catches errors during event handling
-def error_handler(e):
-    print(f"SocketIO Debug: GLOBAL error handler caught: {e}")
-
-
-@socketio.on_error_default  # Catches errors for unhandled events
-def default_error_handler(e):
-    print(f"SocketIO Debug: GLOBAL default error handler caught: {e}")
-
-
-@socketio.on("*")  # Catches ALL events (including custom ones like 'chat message')
-def catch_all(event, sid, *args, **kwargs):
-    print(
-        f"SocketIO Debug: GLOBAL CATCH-ALL event: '{event}' from SID: {sid}, Args: {args}, Kwargs: {kwargs}"
-    )
-
-
 def create_app():
     load_dotenv()
     app = Flask(__name__)
@@ -69,7 +28,6 @@ def create_app():
     app.config["SESSION_PERMANENT"] = False
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")  # add to .env
 
-
     try:
         app.amadeus = Client(
             client_id=os.getenv("AMADEUS_CLIENT_ID"),
@@ -78,6 +36,7 @@ def create_app():
     except Exception as e:
         print(f"Failed to initialize Amadeus client: {e}")
         app.amadeus = None
+        
     # Apply CORS globally for HTTP requests
     CORS(
         app,
@@ -87,13 +46,21 @@ def create_app():
 
     jwt = JWTManager(app)
 
-    # Initialize SocketIO with the Flask app here
-    # This associates the global socketio instance with the app.
+    # Initialize SocketIO with the Flask app here with proper configuration
     socketio.init_app(
-        app, cors_allowed_origins=["http://localhost:5173", "http://127.0.0.1:5173"]
+        app, 
+        cors_allowed_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        async_mode='threading',  # Specify async mode
+        logger=True,  # Enable logging for debugging
+        engineio_logger=True,  # Enable engine.io logging
+        transports=['polling', 'websocket'],  # Support both transports
+        allow_upgrades=True,
+        ping_timeout=60,
+        ping_interval=25
     )
+    
     # Store socketio instance in app.extensions for access in other modules
-    app.extensions["socketio"] = socketio  # Now storing the global instance
+    app.extensions["socketio"] = socketio
 
     # Bcrypt init
     bcrypt = Bcrypt(app)
@@ -108,20 +75,25 @@ def create_app():
     from .routes.auth import auth_bp
     from .routes.trips import trips_bp
     from .routes.events import events_bp
-    from .routes.booking import booking_bp # <<< Import the new booking blueprint
+    from .routes.booking import booking_bp
 
-    # CRUCIAL: Simply import the sockets module here.
-    # This import will cause the module to be executed, and its @socketio.on decorators
-    # (or socketio.on_namespace call) will bind to the global 'socketio' instance initialized above.
-    from .routes import sockets  # Just import the module, no specific function/class
-
-    # END CRUCIAL SECTION
+    # CRUCIAL: Import the sockets module to register namespace handlers
+    # This must come AFTER socketio.init_app() so the socketio instance is ready
+    from .routes import sockets
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(trips_bp, url_prefix="/api/trips")
     app.register_blueprint(events_bp, url_prefix="/api/events")
-    app.register_blueprint(booking_bp, url_prefix="/api/booking") # <<< Register the blueprint
+    app.register_blueprint(booking_bp, url_prefix="/api/booking")
 
+    # Add some debug event handlers (optional, for troubleshooting)
+    @socketio.on("connect")
+    def handle_connect():
+        print(f"🔌 Client connected to main namespace: {request.sid}")
+
+    @socketio.on("disconnect")
+    def handle_disconnect():
+        print(f"🔌 Client disconnected from main namespace: {request.sid}")
 
     # Return both the Flask app and the global socketio instance
     return app, socketio

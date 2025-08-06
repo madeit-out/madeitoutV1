@@ -1,7 +1,9 @@
+// Header.jsx
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useUser } from "../context/UserContext"; // Import useUser context
 import { AuthAPI } from "../adapters/apiAdapter"; // Import AuthAPI for logout
+import Logo from "../images/logo.png"; // Assuming you have a logo image
 
 export default function Header() {
   const { user, loadingUser } = useUser(); // Get user and loading status from context
@@ -24,113 +26,128 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-[#012A3D] text-white p-4 shadow-md sticky top-0 z-40">
-      <div className="container mx-auto flex items-center justify-between relative">
-        {/* Hamburger Menu Button (Visible on small screens) */}
-        <div className="lg:hidden">
-          <button
-            onClick={toggleMenu}
-            className="text-[#72ADBF] focus:outline-none p-2 rounded-md hover:bg-[#0395A7] hover:bg-opacity-20 transition-colors"
-            aria-label="Toggle navigation menu"
-          >
-            <svg
-              className="w-8 h-8"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d={
-                  isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16m-7 6h7"
-                }
-              ></path>
-            </svg>
-          </button>
-        </div>
-
-        {/* Centered App Title */}
-        <div className="absolute left-1/2 transform -translate-x-1/2">
-          <h1 className="text-3xl font-bold text-[#72ADBF] whitespace-nowrap">
-            Made It Out
-          </h1>
+    <header className="bg-[#E08544]/95 text-[#1F474A] py-2 px-4 shadow-lg sticky top-0 z-40 backdrop-blur-md border-b border-[#1F474A]/10">
+      <div className="container mx-auto flex items-center justify-between relative px-4 min-h-[60px]">
+        {/* Enhanced Logo and Brand Section */}
+        <div className="flex items-center space-x-3 group">
+          <div className="relative">
+            <img 
+              src={Logo} 
+              alt="Made It Out Logo" 
+              className="h-8 w-8 sm:h-10 sm:w-10 transition-transform duration-300 group-hover:scale-105 drop-shadow-sm" 
+            />
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#1F474A] whitespace-nowrap tracking-tight leading-tight">
+              Made It Out
+            </h1>
+            <span className="text-xs text-[#1F474A]/70 font-medium tracking-wide hidden sm:block leading-none">
+              GROUP TRAVEL SIMPLIFIED
+            </span>
+          </div>
         </div>
 
         {/* Desktop Navigation (Visible on large screens) */}
-        <nav className="hidden lg:block">
-          <ul className="flex space-x-6 items-center">
+        <nav className="hidden lg:flex items-center space-x-6">
+          <Link
+            to="/dashboard"
+            className="text-[#1F474A]/80 hover:text-[#1F474A] font-semibold transition-all duration-200 hover:underline decoration-2 underline-offset-4 px-2 py-1 rounded-md hover:bg-[#1F474A]/10"
+          >
+            Dashboard
+          </Link>
+          <Link
+            to="/profile"
+            className="text-[#1F474A]/80 hover:text-[#1F474A] font-semibold transition-all duration-200 hover:underline decoration-2 underline-offset-4 px-2 py-1 rounded-md hover:bg-[#1F474A]/10"
+          >
+            Profile
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="
+              bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold px-4 py-1.5 rounded-md
+              hover:from-red-600 hover:to-red-700 transition-all duration-200
+              shadow-md hover:shadow-lg transform hover:scale-105
+              focus:outline-none focus:ring-2 focus:ring-red-500/30
+              text-sm
+            "
+          >
+            Logout
+          </button>
+        </nav>
+
+        {/* Mobile Menu Button (Visible on small screens) */}
+        <button
+          onClick={toggleMenu}
+          className="lg:hidden p-2 rounded-md hover:bg-[#1F474A]/10 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#1F474A]/30"
+          aria-label="Toggle navigation menu"
+        >
+          <svg
+            className="w-6 h-6 text-[#1F474A]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d={
+                isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"
+              }
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* Enhanced Mobile Menu Dropdown */}
+      <div
+        className={`lg:hidden transition-all duration-300 ease-in-out ${
+          isMenuOpen
+            ? "max-h-96 opacity-100 mt-2"
+            : "max-h-0 opacity-0 overflow-hidden"
+        }`}
+      >
+        <nav className="bg-white/90 backdrop-blur-sm rounded-xl shadow-xl border border-white/20 mx-4 p-2">
+          <ul className="flex flex-col space-y-1">
             <li>
               <Link
                 to="/dashboard"
-                className="text-white hover:text-[#72ADBF] font-semibold transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center space-x-3 py-2.5 px-3 text-[#1F474A] hover:bg-[#416B6B]/10 rounded-lg transition-all duration-200 font-semibold group"
               >
-                Dashboard
+                <svg className="w-4 h-4 text-[#416B6B] group-hover:text-[#E08544] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 15V9l8 6H8z" />
+                </svg>
+                <span>Dashboard</span>
               </Link>
             </li>
             <li>
               <Link
                 to="/profile"
-                className="text-white hover:text-[#72ADBF] font-semibold transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center space-x-3 py-2.5 px-3 text-[#1F474A] hover:bg-[#416B6B]/10 rounded-lg transition-all duration-200 font-semibold group"
               >
-                Profile
+                <svg className="w-4 h-4 text-[#416B6B] group-hover:text-[#E08544] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span>Profile</span>
               </Link>
             </li>
-            <li>
+            <li className="pt-1 border-t border-[#1F474A]/10">
               <button
                 onClick={handleLogout}
-                className="text-white bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                className="w-full flex items-center space-x-3 py-2.5 px-3 text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 font-semibold group"
               >
-                Logout
+                <svg className="w-4 h-4 text-red-500 group-hover:text-red-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Logout</span>
               </button>
             </li>
           </ul>
         </nav>
-
-        {/* Placeholder for spacing on mobile when menu is closed, if needed */}
-        {/* On large screens, desktop nav fills the space */}
-        <div className="hidden lg:hidden w-8 h-8"></div>
       </div>
-
-      {/* Mobile Menu Dropdown (Toggle based on isMenuOpen state) */}
-      <nav
-        className={`lg:hidden mt-4 transition-all duration-300 ease-in-out ${
-          isMenuOpen
-            ? "max-h-screen opacity-100"
-            : "max-h-0 opacity-0 overflow-hidden"
-        }`}
-      >
-        <ul className="flex flex-col space-y-2">
-          <li>
-            <Link
-              to="/dashboard"
-              onClick={() => setIsMenuOpen(false)} // Close menu on click
-              className="block py-3 px-4 text-white hover:bg-[#0395A7] rounded-md transition-colors font-semibold"
-            >
-              Dashboard
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/profile"
-              onClick={() => setIsMenuOpen(false)} // Close menu on click
-              className="block py-3 px-4 text-white hover:bg-[#0395A7] rounded-md transition-colors font-semibold"
-            >
-              Profile
-            </Link>
-          </li>
-          <li>
-            <button
-              onClick={handleLogout}
-              className="w-full text-left py-3 px-4 text-white hover:bg-red-700 rounded-md transition-colors font-semibold"
-            >
-              Logout
-            </button>
-          </li>
-        </ul>
-      </nav>
     </header>
   );
 }

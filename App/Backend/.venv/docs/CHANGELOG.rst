@@ -1,29 +1,5 @@
 Changelog
 =========
-12.0.0 - 2025-04-11
---------------------
-Decommissioned the Points of Interest and Location Score APIs
-
-Updated the Ubuntu 24.04 for GitHub Actions
-
-Big thanks to `Siddhartha Dutta <https://github.com/siddydutta>`_ for his contribution to the above implementations!
-
-11.0.0 - 2024-10-02
---------------------
-Decommissioned the Trip Parser API
-
-10.1.0 - 2024-06-20
---------------------
-Add support for the `Hotel Booking v2 API <https://developers.amadeus.com/self-service/category/hotels/api-doc/hotel-booking>`_. Big thanks to `Siddhartha Dutta <https://github.com/siddydutta>`_ for his contribution
-
-10.0.0 - 2024-04-17
---------------------
-Decommissioned the Safe Place API
-
-Fixed the List Type Query Parameter for Hotel List API, Big thanks to `Siddhartha Dutta <https://github.com/siddydutta>`_ for his contribution!
-
-Updated sphinx version from 3.4.1 to 5.0.0
-
 9.0.0 - 2023-09-04
 --------------------
 Decommissioned the Travel Restrictions API v2

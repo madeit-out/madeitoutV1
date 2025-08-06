@@ -5,7 +5,7 @@ from datetime import datetime
 
 from ..models.trip import Trip
 from ..models.user import User
-from ..models.event import Event # Make sure to import the Event model
+from ..models.event import Event  # Make sure to import the Event model
 
 trips_bp = Blueprint("trips", __name__)
 
@@ -19,6 +19,9 @@ def get_user_object_id():
         return None
 
 
+# In app/routes/trips.py
+
+
 def enhance_trip_data(db, trip_doc):
     """
     Enhances trip data for frontend display, converting ObjectIds to strings
@@ -26,21 +29,25 @@ def enhance_trip_data(db, trip_doc):
     Accepts a raw trip dictionary from MongoDB.
     """
     trip = Trip.from_dict(trip_doc)
-    
+
     enhanced_data = trip.to_dict()
 
     member_ids = enhanced_data.get("members", [])
     members_info = []
-    for member_id_str in member_ids:
+    for member_id in member_ids:
         try:
-            member_obj_id = ObjectId(member_id_str)
-            user = db.users.find_one({"_id": member_obj_id}, {"username": 1, "email": 1, "_id": 1})
+            member_obj_id = ObjectId(member_id)
+            user = db.users.find_one(
+                {"_id": member_obj_id}, {"username": 1, "email": 1, "_id": 1}
+            )
             if user:
-                members_info.append({
-                    "id": str(user["_id"]),
-                    "username": user.get("username"),
-                    "email": user.get("email")
-                })
+                members_info.append(
+                    {
+                        "id": str(user["_id"]),
+                        "username": user.get("username"),
+                        "email": user.get("email"),
+                    }
+                )
         except errors.InvalidId:
             continue
     enhanced_data["members_info"] = members_info
@@ -55,8 +62,24 @@ def enhance_trip_data(db, trip_doc):
         except errors.InvalidId:
             pass
     enhanced_data["owner_username"] = owner_username
-    
+
     enhanced_data["trip_name"] = enhanced_data["title"]
+
+    # --- FIX: Convert all ObjectIds to strings for JSON serialization ---
+    if "_id" in enhanced_data and isinstance(enhanced_data["_id"], ObjectId):
+        enhanced_data["_id"] = str(enhanced_data["_id"])
+
+    if "created_by" in enhanced_data and isinstance(
+        enhanced_data["created_by"], ObjectId
+    ):
+        enhanced_data["created_by"] = str(enhanced_data["created_by"])
+
+    # Also convert the 'members' list to strings.
+    if "members" in enhanced_data:
+        enhanced_data["members"] = [
+            str(member_id) for member_id in enhanced_data["members"]
+        ]
+    # --- END FIX ---
 
     return enhanced_data
 
@@ -81,11 +104,18 @@ def create_trip():
     budget = data.get("budget")
 
     if not all([title, destination, arrival, departure]):
-        return jsonify({"error": "Missing required fields (title, destination, arrival, departure)"}), 400
+        return (
+            jsonify(
+                {
+                    "error": "Missing required fields (title, destination, arrival, departure)"
+                }
+            ),
+            400,
+        )
 
     try:
-        datetime.fromisoformat(arrival.replace('Z', '+00:00'))
-        datetime.fromisoformat(departure.replace('Z', '+00:00'))
+        datetime.fromisoformat(arrival.replace("Z", "+00:00"))
+        datetime.fromisoformat(departure.replace("Z", "+00:00"))
     except ValueError:
         return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
 
@@ -94,9 +124,9 @@ def create_trip():
         user_to_invite = db.users.find_one({"email": email.strip().lower()})
         if user_to_invite:
             invited_user_ids.append(user_to_invite["_id"])
-    
+
     initial_members = [user_id]
-    
+
     new_trip = Trip(
         title=title,
         created_by=user_id,
@@ -108,7 +138,7 @@ def create_trip():
         member_emails=member_emails,
         is_public=is_public,
         cover_image_url=cover_image_url,
-        budget=budget
+        budget=budget,
     )
 
     result = db.trips.insert_one(new_trip.to_dict())
@@ -116,8 +146,7 @@ def create_trip():
 
     for invited_id in invited_user_ids:
         db.users.update_one(
-            {"_id": invited_id},
-            {"$addToSet": {"pending_invitations": new_trip._id}}
+            {"_id": invited_id}, {"$addToSet": {"pending_invitations": new_trip._id}}
         )
 
     enhanced_trip = enhance_trip_data(db, new_trip.to_dict())
@@ -143,11 +172,11 @@ def get_pending_trip_invites():
         return jsonify([]), 200
 
     trips_cursor = db.trips.find({"_id": {"$in": pending_ids}})
-    
+
     enhanced_invites = []
     for trip_doc in trips_cursor:
         enhanced_trip = enhance_trip_data(db, trip_doc)
-        
+
         invite_info = {
             "id": enhanced_trip["_id"],
             "trip_id": enhanced_trip["_id"],
@@ -163,7 +192,7 @@ def get_pending_trip_invites():
     return jsonify(enhanced_invites), 200
 
 
-@trips_bp.route('/<trip_id>/accept-invite', methods=['POST'])
+@trips_bp.route("/<trip_id>/accept-invite", methods=["POST"])
 @jwt_required()
 def accept_trip_invite(trip_id):
     db = current_app.db
@@ -182,16 +211,15 @@ def accept_trip_invite(trip_id):
         return jsonify({"error": "No pending invite for this trip"}), 403
 
     db.trips.update_one(
-        {"_id": trip_obj_id},
-        {"$addToSet": {"members": current_user_id}}
+        {"_id": trip_obj_id}, {"$addToSet": {"members": current_user_id}}
     )
 
     db.users.update_one(
-        {"_id": current_user_id},
-        {"$pull": {"pending_invitations": trip_obj_id}}
+        {"_id": current_user_id}, {"$pull": {"pending_invitations": trip_obj_id}}
     )
 
     return jsonify({"message": "Trip invite accepted"}), 200
+
 
 @trips_bp.route("/<trip_id>", methods=["GET"])
 @jwt_required()
@@ -209,6 +237,44 @@ def get_trip(trip_id):
 
     return jsonify(enhance_trip_data(db, trip))
 
+# In app/routes/trips.py
+
+@trips_bp.route("/<trip_id>", methods=["PUT"])
+@jwt_required()
+def update_trip(trip_id):
+    db = current_app.db
+    user_id = get_user_object_id()
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        trip_obj_id = ObjectId(trip_id)
+    except errors.InvalidId:
+        return jsonify({"error": "Invalid trip ID"}), 400
+
+    trip_to_update = db.trips.find_one({"_id": trip_obj_id})
+    if not trip_to_update:
+        return jsonify({"error": "Trip not found"}), 404
+
+    if trip_to_update.get("created_by") != user_id:
+        return jsonify({"error": "You are not authorized to edit this trip"}), 403
+
+    data = request.get_json()
+    
+    # --- FIX: Add the new fields to the whitelist ---
+    allowed_fields = [
+        "title", "destination", "arrival", "departure", 
+        "description", "budget", "is_public", "cover_image_url"
+    ]
+    update_fields = {k: v for k, v in data.items() if k in allowed_fields}
+
+    if not update_fields:
+        return jsonify({"error": "No update fields provided"}), 400
+    
+    db.trips.update_one({"_id": trip_obj_id}, {"$set": update_fields})
+
+    updated_trip = db.trips.find_one({"_id": trip_obj_id})
+    return jsonify(enhance_trip_data(db, updated_trip))
 
 @trips_bp.route("/my-trips", methods=["GET"])
 @jwt_required()
@@ -231,21 +297,58 @@ def get_dashboard_stats():
         return jsonify({"error": "Unauthorized"}), 401
 
     now_iso = datetime.utcnow().isoformat()
-    
+
     all_trips_cursor = db.trips.find({"members": user_id})
     all_trips = list(all_trips_cursor)
-    
+
     upcoming = [t for t in all_trips if t["arrival"] > now_iso]
-    active = [t for t in all_trips if t["arrival"] <= now_iso and t["departure"] >= now_iso]
+    active = [
+        t for t in all_trips if t["arrival"] <= now_iso and t["departure"] >= now_iso
+    ]
     past = [t for t in all_trips if t["departure"] < now_iso]
-    
+
     owned = [t for t in all_trips if t.get("created_by") == user_id]
-    
-    return jsonify({
-        "total_trips": len(all_trips),
-        "upcoming_trips": len(upcoming),
-        "active_trips": len(active),
-        "past_trips": len(past),
-        "owned_trips": len(owned),
-        "member_trips": len(all_trips) - len(owned)
-    })
+
+    return jsonify(
+        {
+            "total_trips": len(all_trips),
+            "upcoming_trips": len(upcoming),
+            "active_trips": len(active),
+            "past_trips": len(past),
+            "owned_trips": len(owned),
+            "member_trips": len(all_trips) - len(owned),
+        }
+    )
+
+
+@trips_bp.route("/<trip_id>", methods=["DELETE"])
+@jwt_required()
+def delete_trip(trip_id):
+    db = current_app.db
+    user_id = get_user_object_id()
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        trip_obj_id = ObjectId(trip_id)
+    except errors.InvalidId:
+        return jsonify({"error": "Invalid trip ID format"}), 400
+
+    # Security: Find the trip and ensure the current user is the owner
+    trip_to_delete = db.trips.find_one({"_id": trip_obj_id})
+    if not trip_to_delete:
+        return jsonify({"error": "Trip not found"}), 404
+
+    if trip_to_delete.get("created_by") != user_id:
+        return jsonify({"error": "You are not authorized to delete this trip"}), 403
+
+    # Proceed with deletion
+    db.trips.delete_one({"_id": trip_obj_id})
+
+    # Also delete all events associated with this trip for data integrity
+    db.events.delete_many({"trip_id": trip_obj_id})
+
+    return (
+        jsonify({"message": "Trip and all associated events deleted successfully"}),
+        200,
+    )
