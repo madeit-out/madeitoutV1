@@ -2,70 +2,45 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from bson import ObjectId, errors
 from datetime import datetime
+from ..models.event import Event
 
 events_bp = Blueprint("events", __name__)
+
 
 def get_user_object_id():
     identity = get_jwt_identity()
     try:
         return ObjectId(identity)
-    except errors.InvalidId:
+    except (errors.InvalidId, TypeError):
         return None
 
 
-@events_bp.route("/<trip_id>", methods=["POST"])
+@events_bp.route("/", methods=["POST"])
 @jwt_required()
-def create_event(trip_id):
+def create_event():
     db = current_app.db
     user_id = get_user_object_id()
     if not user_id:
         return jsonify({"error": "Unauthorized"}), 401
 
     data = request.get_json()
-    title = data.get("title")
-    description = data.get("description", "")
-    location = data.get("location", "")
-    start_time = data.get("start_time")
-    end_time = data.get("end_time")
+    if not data.get("trip_id") or not data.get("title"):
+        return jsonify({"error": "Missing trip_id and title"}), 400
 
-    if not title or not start_time or not end_time:
-        return jsonify({"error": "Missing required fields"}), 400
-
-    # Validate dates (ISO format)
     try:
-        start_time_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-        end_time_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
-    except ValueError:
-        return jsonify({"error": "Invalid date format"}), 400
+        trip_obj_id = ObjectId(data["trip_id"])
+        trip = db.trips.find_one({"_id": trip_obj_id, "members": user_id})
+        if not trip:
+            return jsonify({"error": "Trip not found or you are not a member"}), 403
 
-    # Check trip exists and user is a member
-    try:
-        trip_obj_id = ObjectId(trip_id)
+        event = Event.from_dict({**data, "created_by": user_id})
+        result = db.events.insert_one(event.to_dict())
+        created_event = db.events.find_one({"_id": result.inserted_id})
+        return jsonify(Event.from_dict(created_event).to_json()), 201
     except errors.InvalidId:
-        return jsonify({"error": "Invalid trip ID"}), 400
-
-    trip = db.trips.find_one({"_id": trip_obj_id})
-    if not trip or user_id not in trip.get("members", []):
-        return jsonify({"error": "Trip not found or unauthorized"}), 404
-
-    event = {
-        "trip_id": trip_obj_id,
-        "title": title,
-        "description": description,
-        "location": location,
-        "start_time": start_time_dt.isoformat(),
-        "end_time": end_time_dt.isoformat(),
-        "created_by": user_id,
-        "created_at": datetime.utcnow().isoformat()
-    }
-
-    result = db.events.insert_one(event)
-
-    event["_id"] = str(result.inserted_id)
-    event["trip_id"] = str(trip_obj_id)
-    event["created_by"] = str(user_id)
-
-    return jsonify({"message": "Event created", "event": event}), 201
+        return jsonify({"error": "Invalid trip_id format"}), 400
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
 
 @events_bp.route("/<trip_id>", methods=["GET"])
@@ -78,20 +53,16 @@ def get_trip_events(trip_id):
 
     try:
         trip_obj_id = ObjectId(trip_id)
+        trip = db.trips.find_one({"_id": trip_obj_id, "members": user_id})
+        if not trip:
+            return jsonify({"error": "Trip not found or unauthorized"}), 404
+
+        events_from_db = list(
+            db.events.find({"trip_id": trip_obj_id}).sort("start_time", 1)
+        )
+        return jsonify([Event.from_dict(e).to_json() for e in events_from_db])
     except errors.InvalidId:
         return jsonify({"error": "Invalid trip ID"}), 400
-
-    trip = db.trips.find_one({"_id": trip_obj_id})
-    if not trip or user_id not in trip.get("members", []):
-        return jsonify({"error": "Trip not found or unauthorized"}), 404
-
-    events = list(db.events.find({"trip_id": trip_obj_id}).sort("start_time", 1))
-    for event in events:
-        event["_id"] = str(event["_id"])
-        event["trip_id"] = str(event["trip_id"])
-        event["created_by"] = str(event["created_by"])
-
-    return jsonify(events)
 
 
 @events_bp.route("/event/<event_id>", methods=["PUT"])
@@ -102,38 +73,42 @@ def update_event(event_id):
     if not user_id:
         return jsonify({"error": "Unauthorized"}), 401
 
-    data = request.get_json()
-    update_fields = {
-        k: v for k, v in data.items()
-        if k in ["title", "description", "location", "start_time", "end_time"]
-    }
-
-    if "start_time" in update_fields or "end_time" in update_fields:
-        try:
-            if "start_time" in update_fields:
-                update_fields["start_time"] = datetime.fromisoformat(update_fields["start_time"].replace('Z', '+00:00')).isoformat()
-            if "end_time" in update_fields:
-                update_fields["end_time"] = datetime.fromisoformat(update_fields["end_time"].replace('Z', '+00:00')).isoformat()
-        except ValueError:
-            return jsonify({"error": "Invalid date format"}), 400
-
     try:
         event_obj_id = ObjectId(event_id)
     except errors.InvalidId:
         return jsonify({"error": "Invalid event ID"}), 400
 
-    event = db.events.find_one({"_id": event_obj_id})
-    if not event:
+    event_to_update = db.events.find_one({"_id": event_obj_id})
+    if not event_to_update:
         return jsonify({"error": "Event not found"}), 404
 
-    # Check that user is creator or trip member
-    trip = db.trips.find_one({"_id": event["trip_id"]})
-    if not trip or user_id not in trip.get("members", []):
-        return jsonify({"error": "Unauthorized"}), 401
+    trip = db.trips.find_one({"_id": event_to_update["trip_id"], "members": user_id})
+    if not trip:
+        return jsonify({"error": "You do not have permission to edit this event"}), 403
+
+    data = request.get_json()
+    update_fields = {
+        k: v
+        for k, v in data.items()
+        if k
+        in [
+            "title",
+            "notes",
+            "location",
+            "start_time",
+            "end_time",
+            "type",
+            "cost",
+            "status",
+        ]
+    }
+
+    if not update_fields:
+        return jsonify({"error": "No update fields provided"}), 400
 
     db.events.update_one({"_id": event_obj_id}, {"$set": update_fields})
-
-    return jsonify({"message": "Event updated"})
+    updated_event = db.events.find_one({"_id": event_obj_id})
+    return jsonify(Event.from_dict(updated_event).to_json())
 
 
 @events_bp.route("/event/<event_id>", methods=["DELETE"])
@@ -149,14 +124,16 @@ def delete_event(event_id):
     except errors.InvalidId:
         return jsonify({"error": "Invalid event ID"}), 400
 
-    event = db.events.find_one({"_id": event_obj_id})
-    if not event:
-        return jsonify({"error": "Event not found"}), 404
+    event_to_delete = db.events.find_one({"_id": event_obj_id})
+    if not event_to_delete:
+        return jsonify({"message": "Event already deleted"}), 200
 
-    trip = db.trips.find_one({"_id": event["trip_id"]})
-    if not trip or user_id not in trip.get("members", []):
-        return jsonify({"error": "Unauthorized"}), 401
+    trip = db.trips.find_one({"_id": event_to_delete["trip_id"], "members": user_id})
+    if not trip:
+        return (
+            jsonify({"error": "You do not have permission to delete this event"}),
+            403,
+        )
 
     db.events.delete_one({"_id": event_obj_id})
-
-    return jsonify({"message": "Event deleted"})
+    return jsonify({"message": "Event deleted successfully"})

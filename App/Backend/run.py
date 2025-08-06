@@ -1,11 +1,12 @@
-from app import create_app # Assuming 'app' is your package containing create_app
+# import pymongo
+# import gevent.monkey
+# gevent.monkey.patch_all(ssl=False)
 
-    # Call create_app to get both the Flask app and the SocketIO instance
-app, socketio_instance = create_app()
+from app import create_app
 
-    # Run the SocketIO server.
-    # This is the correct way to start your Flask app when using Flask-SocketIO.
-    # Ensure the port matches the SOCKET_SERVER_URL in your frontend (e.g., Itinerary.jsx)
+# app, socketio_instance = create_app()
+
 if __name__ == '__main__':
-        socketio_instance.run(app, debug=False, port=5000) # Keep debug=False for now
+    app, socketio_instance = create_app()
+    socketio_instance.run(app, debug=True, host='127.0.0.1', port=5000)
     

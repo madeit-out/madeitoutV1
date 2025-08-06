@@ -1,193 +1,102 @@
-# routes/sockets.py
-
 from flask import request, current_app
-from flask_socketio import Namespace, join_room, leave_room, emit
+from flask_socketio import Namespace, join_room, emit
 from flask_jwt_extended import decode_token
 from bson import ObjectId, errors
-from datetime import datetime
 
-# Import the global socketio instance from the main app package
-from app import socketio
+from .. import socketio
+from ..models.trip_chat import TripChatMessage # Import the refactored OOP model
 
+class TripChatNamespace(Namespace):
+    connected_users = {}
 
-# Custom JWT authentication decorator for SocketIO
-def jwt_socket_required(f):
-    # The wrapper needs to accept 'self' as the first argument
-    # when decorating a method of a class (like a Namespace).
-    def wrapper(self, *args, **kwargs):
+    def on_connect(self, auth):
+        print(f"🔍 Connection attempt received with auth: {auth}")
         try:
-            token = request.args.get("token")
+            token = auth.get("token") if auth else None
             if not token:
-                # Use self.emit because we are inside a Namespace method
-                self.emit(
-                    "error",
-                    {"message": "Authentication token missing."},
-                    room=request.sid,
-                )
+                print("❌ No token provided")
                 return False
 
+            print(f"🔑 Attempting to decode token: {token[:50]}...")
             decoded_token = decode_token(token)
             user_id = decoded_token["sub"]
-            request.sid_data = {"user_id": user_id}  # Attach user_id to socket context
-
-            # Pass 'self' explicitly to the original function 'f'
-            return f(self, *args, **kwargs)
+            self.connected_users[request.sid] = user_id
+            print(f"✅ Client connected to /chat namespace: SID={request.sid}, User ID={user_id}")
+            return True  # Explicitly return True for successful connection
         except Exception as e:
-            print(f"SocketIO authentication failed: {e}")
-            self.emit(
-                "error", {"message": "Authentication failed."}, room=request.sid
-            )  # Use self.emit
+            print(f"❌ SocketIO Connect: Authentication failed: {e}. Disconnecting.")
             return False
 
-    return wrapper
-
-
-# Define a SocketIO Namespace for trip chat events
-class TripChatNamespace(Namespace):
-    def on_connect(self):
-        # The jwt_socket_required decorator will handle auth before this is called
-        user_id = getattr(request, "sid_data", {}).get("user_id", "anonymous")
-        print(f"Client connected: {request.sid}, User ID: {user_id}")
-        # No emit here, as the client might not be in a room yet.
-
     def on_disconnect(self):
-        user_id = getattr(request, "sid_data", {}).get("user_id", "anonymous")
-        print(f"Client disconnected: {request.sid}, User ID: {user_id}")
+        user_id = self.connected_users.pop(request.sid, "anonymous")
+        print(f"Client disconnected from /chat namespace: SID={request.sid}, User ID={user_id}")
 
-    @jwt_socket_required
     def on_joinTripRoom(self, trip_id):
-        db = current_app.db
-        user_id = request.sid_data["user_id"]
+        user_id = self.connected_users.get(request.sid)
+        if not user_id:
+            return self.emit("error", {"message": "Not authenticated."}, room=request.sid)
 
         try:
             trip_obj_id = ObjectId(trip_id)
             user_obj_id = ObjectId(user_id)
         except errors.InvalidId:
-            self.emit("error", {"message": "Invalid ID provided."})
-            return
+            return self.emit("error", {"message": "Invalid ID provided."}, room=request.sid)
 
-        trip = db.trips.find_one({"_id": trip_obj_id, "members": user_obj_id})
+        trip = current_app.db.trips.find_one({"_id": trip_obj_id, "members": user_obj_id})
         if not trip:
-            self.emit("error", {"message": "Unauthorized to join this trip chat."})
-            return
+            return self.emit("error", {"message": "Unauthorized to join this trip chat."}, room=request.sid)
 
         join_room(trip_id)
-        print(f"User {user_id} (SID: {request.sid}) joined trip room: {trip_id}")
-        self.emit(
-            "status message",
-            {"text": f"User {user_id[:8]}... has joined the chat."},
-            room=trip_id,
-        )
+        print(f"User {user_id} joined trip room {trip_id} (SID: {request.sid})")
 
-        messages_cursor = db.chat_messages.find({"trip_id": trip_obj_id}).sort(
-            "timestamp", 1
-        )
-
-        historical_messages = []
-        for msg in messages_cursor:
-            msg["_id"] = str(msg["_id"])
-            msg["trip_id"] = str(msg["trip_id"])
-            msg["sender_id"] = str(msg["sender_id"])
-            msg["timestamp"] = msg["timestamp"].isoformat()
-            historical_messages.append(msg)
-
+        # This part no longer needs the model; it queries the DB directly.
+        messages_from_db = current_app.db.trip_chats.find({"tripId": trip_obj_id}).sort("timestamp", 1).limit(50)
+        
+        # Convert the raw DB documents to JSON-friendly format
+        historical_messages = [TripChatMessage.from_dict(msg).to_json() for msg in messages_from_db]
+        
         self.emit("historical messages", historical_messages, room=request.sid)
 
-    @jwt_socket_required
-    def on_leaveTripRoom(self, trip_id):
-        user_id = request.sid_data["user_id"]
-        leave_room(trip_id)
-        print(f"User {user_id} (SID: {request.sid}) left trip room: {trip_id}")
-        self.emit(
-            "status message",
-            {"text": f"User {user_id[:8]}... has left the chat."},
-            room=trip_id,
-        )
-
-    # REMOVED @jwt_socket_required for debugging
-    # Simplified signature to just accept data
     def on_chat_message(self, data):
-        db = current_app.db
-
-        # --- DEBUGGING ADDITIONS START ---
-        print(
-            f"SocketIO Debug: Namespace received 'chat message' event with data: {data}"
-        )
-        # --- DEBUGGING ADDITIONS END ---
-
-        text = data.get("text")
-        sender_id_from_frontend = data.get("senderId")
-        timestamp_str = data.get("timestamp")
-        trip_id = data.get("tripId")
-
-        if not all([text, sender_id_from_frontend, timestamp_str, trip_id]):
-            print(f"SocketIO Debug: Invalid message data received by namespace: {data}")
-            self.emit("error", {"message": "Invalid message data."})
-            return
-
-        # Authenticated user ID check is temporarily skipped here for debugging
-        # authenticated_user_id = request.sid_data["user_id"]
-        # if str(authenticated_user_id) != str(sender_id_from_frontend):
-        #     print(
-        #         f"SocketIO Debug: Unauthorized sender. Authenticated: {authenticated_user_id}, Frontend: {sender_id_from_frontend}"
-        #     )
-        #     self.emit("error", {"message": "Unauthorized message sender."})
-        #     return
+        # 1. Check if the handler is being called
+        print("--- 1. 'on_chat_message' handler started.")
+        print(f"---    Received data: {data}")
 
         try:
-            trip_obj_id = ObjectId(trip_id)
-            # Use sender_id_from_frontend directly for this test
-            sender_obj_id = ObjectId(sender_id_from_frontend)
-            timestamp_dt = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
-        except (errors.InvalidId, ValueError) as e:
-            print(
-                f"SocketIO Debug: Invalid ID or timestamp format in namespace: {e}, Data: {data}"
+            db = current_app.db
+            user_id = self.connected_users.get(request.sid)
+
+            # 2. Check if validation is passing
+            if not user_id:
+                print("--- FAILED: User not authenticated.")
+                return
+
+            sender_id = data.get("senderId")
+            if str(user_id) != str(sender_id):
+                print(f"--- FAILED: Unauthorized sender. User ID {user_id} does not match sender ID {sender_id}.")
+                return
+            
+            print("--- 2. Validation passed.")
+
+            # 3. Check if the code is reaching the database command
+            new_message = TripChatMessage(
+                trip_id=data.get("tripId"),
+                sender_id=sender_id,
+                text=data.get("text")
             )
-            self.emit("error", {"message": f"Invalid ID or timestamp format: {e}"})
-            return
+            
+            print(f"--- 3. Attempting to insert message with ID: {new_message._id}")
+            
+            # 4. Check if the database command itself throws an error
+            db.trip_chats.insert_one(new_message.to_dict())
+            
+            print(f"--- 4. SUCCESS: Message {new_message._id} inserted into database.")
 
-        trip = db.trips.find_one({"_id": trip_obj_id, "members": sender_obj_id})
-        if not trip:
-            print(
-                f"SocketIO Debug: User {sender_id_from_frontend} not authorized for trip {trip_id} in namespace."
-            )
-            self.emit(
-                "error", {"message": "Unauthorized to send messages in this trip chat."}
-            )
-            return
+            self.emit("chat message", new_message.to_json(), room=data.get("tripId"))
+            print(f"--- 5. Emitted message to room {data.get('tripId')}")
 
-        message_doc = {
-            "trip_id": trip_obj_id,
-            "sender_id": sender_obj_id,
-            "text": text,
-            "timestamp": timestamp_dt,
-            "created_at": datetime.utcnow(),
-        }
+        except Exception as e:
+            print(f"--- AN ERROR OCCURRED: {e}")
 
-        result = db.chat_messages.insert_one(message_doc)
-
-        broadcast_message = {
-            "_id": str(result.inserted_id),
-            "trip_id": str(message_doc["trip_id"]),
-            "sender_id": str(message_doc["sender_id"]),
-            "text": message_doc["text"],
-            "timestamp": message_doc["timestamp"].isoformat(),
-        }
-
-        # --- DEBUGGING ADDITIONS START ---
-        print(
-            f"SocketIO Debug: Message saved and broadcasting from namespace: {broadcast_message}"
-        )
-        # --- DEBUGGING ADDING END ---
-        self.emit("chat message", broadcast_message, room=trip_id)
-
-    # Catch-all handler for any event not explicitly handled within the namespace.
-    def on_event(self, event_name, *args, **kwargs):
-        print(
-            f"SocketIO Debug: TripChatNamespace received unhandled event: '{event_name}' with args: {args} and kwargs: {kwargs}"
-        )
-
-
-# CRUCIAL: Register the namespace at the root path when the module is imported
-# This line is vital for event binding when app/routes/sockets is imported by app/__init__.py
-socketio.on_namespace(TripChatNamespace("/"))
+# Register namespace at "/chat"
+socketio.on_namespace(TripChatNamespace("/chat"))

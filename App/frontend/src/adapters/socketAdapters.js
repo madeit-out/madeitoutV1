@@ -1,190 +1,156 @@
+// socketAdapters.js - Enhanced debugging version
 import { io } from "socket.io-client";
 
-// Explicitly set the SOCKET_URL to 127.0.0.1 to match backend binding
-const SOCKET_URL = "http://127.0.0.1:5000";
+const URL = import.meta.env.VITE_SOCKET_URL || "http://127.0.0.1:5000";
+console.log("🔍 Socket URL:", URL);
 
-// The socket instance is created here, but autoConnect is false.
-const socket = io(SOCKET_URL, {
-  transports: ["websocket"],
-  autoConnect: false, // We will connect manually
-  query: {
-    token: localStorage.getItem("token") || "", // Pass JWT token from localStorage
-  },
-  // Removed forceNew: true as it can cause issues with rapid reconnections in dev
-});
-
-// Internal callbacks for connection status
-let onConnectCallback = null;
-let onDisconnectCallback = null;
-
-// Listeners for internal socket events
-socket.on("connect", () => {
-  console.log("SocketAdapters Debug: Socket.IO client connected!");
-  if (onConnectCallback) {
-    onConnectCallback(true); // Notify TripChat that connection is established
-  }
-});
-
-socket.on("disconnect", (reason) => {
-  console.log("SocketAdapters Debug: Socket.IO client disconnected:", reason);
-  if (onDisconnectCallback) {
-    onDisconnectCallback(false); // Notify TripChat that connection is lost
-  }
-});
-
-socket.on("connect_error", (err) => {
-  console.error(
-    "SocketAdapters Debug: Socket.IO connection error:",
-    err.message
-  );
-  if (onDisconnectCallback) {
-    // Treat connection error as a disconnection for status
-    onDisconnectCallback(false);
-  }
-});
-
-// General error from backend (e.g., auth failed, invalid data)
-socket.on("error", (err) => {
-  console.error("SocketAdapters Debug: Backend error received:", err);
-  // This is handled by TripChat's onError listener
-});
+let socket = null;
+let listeners = {
+  message: null,
+  historical: null,
+  error: null,
+  connect: null,
+  disconnect: null,
+};
 
 export const ChatSocket = {
-  // Method for TripChat to register its connection status callbacks
-  setConnectionCallbacks: (connectCb, disconnectCb) => {
-    onConnectCallback = connectCb;
-    onDisconnectCallback = disconnectCb;
-  },
-
-  // Connect the socket. This will also send the 'query' parameters.
   connect: () => {
-    if (!socket.connected) {
-      // Update token before connecting in case it changed (e.g., after login)
-      socket.io.opts.query = {
-        token: localStorage.getItem("token") || "",
-      };
-      console.log("SocketAdapters Debug: Attempting to connect socket.");
-      socket.connect();
-    } else {
-      console.log("SocketAdapters Debug: Socket already connected.");
+    const token = localStorage.getItem("token");
+    console.log("🔑 Token exists:", !!token);
+    console.log("🔌 Socket exists and connected:", socket?.connected);
+    
+    if (!token) {
+      console.error("❌ No token found in localStorage");
+      return;
     }
+    
+    if (socket && socket.connected) {
+      console.log("✅ Already connected, skipping");
+      return;
+    }
+
+    console.log("🚀 Attempting to connect to:", `${URL}/chat`);
+    
+    socket = io(`${URL}/chat`, {
+      auth: { token },
+      transports: ["websocket"],
+      reconnectionAttempts: 5,
+      timeout: 10000, // 10 second timeout
+    });
+
+    // Add connection attempt logging
+    socket.on("connect", () => {
+      console.log("✅ Socket connected successfully:", socket.id);
+      if (listeners.connect) listeners.connect();
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("⚠️ Socket disconnected:", reason);
+      if (listeners.disconnect) listeners.disconnect();
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("❌ Socket connection error:", err.message);
+      console.error("❌ Error details:", err);
+      if (listeners.error) listeners.error(err);
+    });
+
+    // Add timeout handling
+    setTimeout(() => {
+      if (socket && !socket.connected) {
+        console.error("⏰ Socket connection timeout after 10 seconds");
+        if (listeners.disconnect) listeners.disconnect();
+      }
+    }, 10000);
+
+    socket.on("chat message", (msg) => {
+      console.log("📨 Received chat message:", msg);
+      if (listeners.message) listeners.message(msg);
+    });
+
+    socket.on("historical messages", (msgs) => {
+      console.log("🕘 Received historical messages:", msgs);
+      if (listeners.historical) listeners.historical(msgs);
+    });
+
+    socket.on("error", (err) => {
+      console.error("❗Socket server error:", err);
+      if (listeners.error) listeners.error(err);
+    });
   },
 
   disconnect: () => {
-    if (socket.connected) {
-      console.log("SocketAdapters Debug: Disconnecting socket.");
+    if (socket) {
+      console.log("🔌 Disconnecting socket");
       socket.disconnect();
-    } else {
-      console.log(
-        "SocketAdapters Debug: Socket not connected, no need to disconnect."
-      );
+      socket = null;
     }
   },
 
-  // Emits 'joinTripRoom' event, matching backend
   joinRoom: (tripId) => {
-    if (socket.connected) {
-      // Only emit if connected
-      console.log(
-        `SocketAdapters Debug: Emitting 'joinTripRoom' for tripId: ${tripId}`
-      );
+    if (socket?.connected) {
+      console.log("🏠 Joining room:", tripId);
       socket.emit("joinTripRoom", tripId);
     } else {
-      console.warn(
-        `SocketAdapters Warning: Not connected, cannot join room ${tripId}.`
-      );
+      console.error("❌ Cannot join room - socket not connected");
     }
   },
 
-  // Emits 'chat message' event, matching backend
   sendMessage: (tripId, text, senderId) => {
-    console.log("SocketAdapters Debug: sendMessage called.");
-    console.log(
-      `SocketAdapters Debug: socket.connected status: ${socket.connected}`
-    );
-
-    if (text.trim() === "") {
-      console.log("SocketAdapters Debug: Message text is empty, not emitting.");
+    if (!socket?.connected) {
+      console.warn("❌ Socket not connected, message was not sent.");
       return;
     }
+    console.log("✅ Emitting 'chat message' with data:", {
+      tripId,
+      text,
+      senderId,
+    });
+    socket.emit("chat message", {
+      tripId,
+      text,
+      senderId,
+    });
+  },
 
-    if (!socket.connected) {
-      console.error(
-        "SocketAdapters Debug: Socket not connected, cannot emit message."
-      );
-      // Emit an error to the frontend if not connected
-      socket.emit("error", {
-        message: "Chat is not connected. Please try again.",
-      });
-      return;
+  onMessage: (callback) => {
+    listeners.message = callback;
+    if (socket) socket.on("chat message", callback);
+  },
+
+  offMessage: () => {
+    if (socket && listeners.message) {
+      socket.off("chat message", listeners.message);
     }
-
-    const messageData = {
-      text: text.trim(),
-      senderId: senderId,
-      timestamp: new Date().toISOString(),
-      tripId: tripId,
-    };
-    console.log(
-      'SocketAdapters Debug: Emitting "chat message" with data:',
-      messageData
-    );
-    socket.emit("chat message", messageData);
+    listeners.message = null;
   },
 
-  // Listens for 'chat message' event, matching backend
-  onMessage: (cb) => {
-    socket.on("chat message", cb);
-    console.log(
-      'SocketAdapters Debug: Listener registered for "chat message".'
-    );
+  onHistoricalMessages: (callback) => {
+    listeners.historical = callback;
+    if (socket) socket.on("historical messages", callback);
   },
 
-  // Listens for 'historical messages' event from backend
-  onHistoricalMessages: (cb) => {
-    socket.on("historical messages", cb);
-    console.log(
-      'SocketAdapters Debug: Listener registered for "historical messages".'
-    );
+  offHistoricalMessages: () => {
+    if (socket && listeners.historical) {
+      socket.off("historical messages", listeners.historical);
+    }
+    listeners.historical = null;
   },
 
-  // Listens for 'status message' event from backend (e.g., user joined/left)
-  onStatusMessage: (cb) => {
-    socket.on("status message", cb);
-    console.log(
-      'SocketAdapters Debug: Listener registered for "status message".'
-    );
+  onError: (callback) => {
+    listeners.error = callback;
+    if (socket) socket.on("error", callback);
   },
 
-  // Listen for general errors from the socket (from backend or connection issues)
-  onError: (cb) => {
-    socket.on("error", cb);
-    console.log('SocketAdapters Debug: Listener registered for "error".');
+  offError: () => {
+    if (socket && listeners.error) {
+      socket.off("error", listeners.error);
+    }
+    listeners.error = null;
   },
 
-  // Off methods for cleanup
-  offMessage: (cb) => {
-    socket.off("chat message", cb);
-    console.log(
-      'SocketAdapters Debug: Listener unregistered for "chat message".'
-    );
-  },
-  offHistoricalMessages: (cb) => {
-    socket.off("historical messages", cb);
-    console.log(
-      'SocketAdapters Debug: Listener unregistered for "historical messages".'
-    );
-  },
-  offStatusMessage: (cb) => {
-    socket.off("status message", cb);
-    console.log(
-      'SocketAdapters Debug: Listener unregistered for "status message".'
-    );
-  },
-  offError: (cb) => {
-    socket.off("error", cb);
-    console.log('SocketAdapters Debug: Listener unregistered for "error".');
+  setConnectionCallbacks: (onConnect, onDisconnect) => {
+    listeners.connect = onConnect;
+    listeners.disconnect = onDisconnect;
   },
 };
-
-export default socket;
