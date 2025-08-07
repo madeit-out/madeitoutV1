@@ -1,13 +1,18 @@
 import React from "react";
-import Logo from "../images/logo.png"; // Assuming you have a logo image
+import { Link } from "react-router-dom"; // 1. Import the Link component
+import Logo from "../images/logo.png";
 
 export default function UnauthenticatedHeader() {
   return (
     <header className="bg-[#E08544]/95 text-[#1F474A] p-4 shadow-lg sticky top-0 z-40 backdrop-blur-md border-b border-[#1F474A]/10">
       <div className="container mx-auto flex items-center justify-between relative px-4">
-        {/* Enhanced Logo and Brand Section */}
-        <div className="flex items-center space-x-4 group">
+        {/* 2. Wrap the logo and brand name in a Link component */}
+        <Link
+          to="/"
+          className="flex items-center space-x-4 group !no-underline"
+        >
           <div className="relative">
+            <div className="absolute inset-0 bg-[#1F474A]/10 rounded-full transition-transform duration-300 group-hover:scale-105"></div>
             <img
               src={Logo}
               alt="Made It Out Logo"
@@ -22,7 +27,7 @@ export default function UnauthenticatedHeader() {
               GROUP TRAVEL SIMPLIFIED
             </span>
           </div>
-        </div>
+        </Link>
       </div>
     </header>
   );

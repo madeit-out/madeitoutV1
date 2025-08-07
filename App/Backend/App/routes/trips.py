@@ -352,3 +352,52 @@ def delete_trip(trip_id):
         jsonify({"message": "Trip and all associated events deleted successfully"}),
         200,
     )
+
+@trips_bp.route("/<trip_id>/invite", methods=["POST"])
+@jwt_required()
+def invite_user_to_trip(trip_id):
+    db = current_app.db
+    user_id = get_user_object_id() # Assumes you have a helper for this
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        trip_obj_id = ObjectId(trip_id)
+    except errors.InvalidId:
+        return jsonify({"error": "Invalid trip ID format"}), 400
+
+    # Security Check: Ensure the user sending the invite is a member of the trip
+    trip = db.trips.find_one({"_id": trip_obj_id, "members": user_id})
+    if not trip:
+        return jsonify({"error": "Trip not found or you are not a member"}), 404
+
+    data = request.get_json()
+    email_to_invite = data.get("email")
+    if not email_to_invite:
+        return jsonify({"error": "Email of user to invite is required"}), 400
+
+    # Find the user to be invited
+    user_to_invite = db.users.find_one({"email": email_to_invite.lower().strip()})
+    if not user_to_invite:
+        return jsonify({"error": f"User with email '{email_to_invite}' not found"}), 404
+
+    invited_user_id = user_to_invite["_id"]
+
+    # Check if the user is already a member or has a pending invite
+    if invited_user_id in trip.get("members", []):
+        return jsonify({"error": "User is already a member of this trip"}), 409
+    if invited_user_id in trip.get("pending_invitations", []):
+        return jsonify({"error": "User already has a pending invitation for this trip"}), 409
+
+    # Add the invite to the trip's pending invitations
+    db.trips.update_one(
+        {"_id": trip_obj_id},
+        {"$addToSet": {"pending_invitations": invited_user_id}}
+    )
+    # Also add the trip to the user's pending invitations
+    db.users.update_one(
+        {"_id": invited_user_id},
+        {"$addToSet": {"pending_invitations": trip_obj_id}}
+    )
+
+    return jsonify({"message": f"Successfully invited {email_to_invite} to the trip"}), 200

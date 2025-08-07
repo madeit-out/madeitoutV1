@@ -31,47 +31,76 @@ export default function InviteUserModal({ isOpen, onClose, tripId }) {
 
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-      {/* Darker, more immersive overlay */}
-      <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
+      {/* Overlay with brand-consistent styling */}
+      <div
+        className="fixed inset-0 bg-[#1F474A]/60 backdrop-blur-sm"
+        aria-hidden="true"
+      />
+
       <div className="fixed inset-0 flex items-center justify-center p-4">
-        {/* Modal Panel: Darker Ocean Blue background, softer rounded corners, modern shadow */}
-        <Dialog.Panel className="bg-[#012A3D] rounded-xl p-8 max-w-md w-full shadow-2xl text-white">
-          {/* Title: Light Teal Blue, bolder font */}
-          <Dialog.Title className="text-2xl font-bold mb-6 text-[#72ADBF]">
+        {/* Modal Panel: Following brand glassmorphism and card patterns */}
+        <Dialog.Panel className="bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-xl border border-white/20 p-6 sm:p-8 max-w-md w-full transition-all duration-300">
+          {/* Title: Brand typography and colors */}
+          <Dialog.Title className="text-2xl sm:text-3xl font-bold text-[#1F474A] mb-6 tracking-tight">
             Invite User to Trip
           </Dialog.Title>
 
-          {/* Input field: Deep Ocean Blue background, white text, light teal border, rounded-lg */}
-          <input
-            type="text"
-            placeholder="Enter username or email"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            className="w-full bg-[#01374A] text-white placeholder-gray-400 border border-[#72ADBF] rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-[#0395A7]"
-            disabled={isInviting}
-          />
+          {/* Input field: Following form element patterns */}
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-[#1F474A] tracking-wide mb-2">
+              Username or Email
+            </label>
+            <input
+              type="text"
+              placeholder="Enter username or email"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              className="w-full px-4 py-4 bg-white/80 text-[#1F474A] placeholder-[#1F474A]/40 border-2 border-[#416B6B]/20 rounded-xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-medium backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isInviting}
+            />
+          </div>
 
-          {error && <p className="text-red-400 text-sm mb-4">{error}</p>} {/* Error color */}
-          {successMessage && (
-            <p className="text-green-400 text-sm mb-4">{successMessage}</p> 
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg mb-4">
+              <p className="text-red-700 text-sm font-medium">{error}</p>
+            </div>
           )}
 
-          <div className="flex justify-end space-x-3 mt-6"> {/* Increased space-x and mt */}
-            {/* Cancel Button: Secondary style with dark gray background, subtle hover */}
+          {/* Success Message */}
+          {successMessage && (
+            <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-lg mb-4">
+              <p className="text-green-700 text-sm font-medium">
+                {successMessage}
+              </p>
+            </div>
+          )}
+
+          {/* Button Container */}
+          <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 mt-8">
+            {/* Cancel Button: Secondary button style */}
             <button
               onClick={onClose}
-              className="px-6 py-3 rounded-lg bg-gray-600 text-white hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-[#416B6B] font-semibold px-6 py-3 rounded-xl hover:bg-[#416B6B]/10 transition-all duration-200 border border-[#416B6B]/20 hover:border-[#416B6B]/40 focus:outline-none focus:ring-2 focus:ring-[#416B6B]/30 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isInviting}
             >
               Cancel
             </button>
-            {/* Send Invite Button: Primary style with bright cyan, subtle hover transform */}
+
+            {/* Send Invite Button: Primary CTA button */}
             <button
               onClick={handleInvite}
-              className="px-6 py-3 rounded-lg bg-[#0395A7] text-white hover:bg-[#5E877D] transition-all duration-300 ease-in-out shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#72ADBF] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-[#416B6B] to-[#E08544] text-white font-bold px-6 py-3 rounded-xl hover:shadow-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#E08544]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               disabled={isInviting}
             >
-              {isInviting ? "Sending..." : "Send Invite"}
+              {isInviting ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full border-2 border-white/20 border-t-white h-4 w-4"></div>
+                  <span>Sending...</span>
+                </div>
+              ) : (
+                "Send Invite"
+              )}
             </button>
           </div>
         </Dialog.Panel>

@@ -27,7 +27,8 @@ function SignUp() {
 
     try {
       await AuthAPI.signUp(formData);
-      navigate("/signin");
+      // Navigate to the dashboard after successful signup
+      navigate("/dashboard");
     } catch (err) {
       setError(err?.response?.data?.message || "Something went wrong");
     } finally {
@@ -37,9 +38,7 @@ function SignUp() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F5F5DC] via-[#F5F5DC] to-[#E08544]/20 p-6">
-      {/* Enhanced Form Card with glassmorphism effect */}
       <div className="w-full max-w-md bg-white/95 backdrop-blur-sm p-10 rounded-3xl shadow-2xl border border-white/20 text-[#1F474A] transform transition-all duration-300 hover:shadow-3xl">
-        {/* Enhanced Header Section */}
         <div className="text-center mb-10">
           <div className="w-16 h-16 bg-gradient-to-br from-[#416B6B] to-[#E08544] rounded-full mx-auto mb-6 flex items-center justify-center shadow-lg">
             <svg
@@ -65,7 +64,6 @@ function SignUp() {
         </div>
 
         <form className="space-y-6" onSubmit={handleSubmit}>
-          {/* Enhanced Username Field */}
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-[#1F474A] tracking-wide">
               USERNAME
@@ -98,7 +96,6 @@ function SignUp() {
             </div>
           </div>
 
-          {/* Enhanced Email Field */}
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-[#1F474A] tracking-wide">
               EMAIL ADDRESS
@@ -131,7 +128,6 @@ function SignUp() {
             </div>
           </div>
 
-          {/* Enhanced Password Field */}
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-[#1F474A] tracking-wide">
               PASSWORD
@@ -164,7 +160,6 @@ function SignUp() {
             </div>
           </div>
 
-          {/* Enhanced Error Display */}
           {error && (
             <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
               <div className="flex">
@@ -186,7 +181,6 @@ function SignUp() {
             </div>
           )}
 
-          {/* Enhanced Submit Button */}
           <button
             type="submit"
             disabled={isLoading}
@@ -224,7 +218,6 @@ function SignUp() {
           </button>
         </form>
 
-        {/* Enhanced Footer */}
         <div className="mt-8 text-center">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -258,7 +251,6 @@ function SignUp() {
           </Link>
         </div>
 
-        {/* Terms and Privacy Notice */}
         <div className="mt-6 text-center">
           <p className="text-xs text-[#1F474A]/50 leading-relaxed">
             By creating an account, you agree to our{" "}
