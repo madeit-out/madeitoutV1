@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { TripAPI, EventAPI } from "../adapters/apiAdapter";
 import { format, parseISO, differenceInDays } from "date-fns";
-import { Calendar, Sparkles, Send, CheckCircle } from "lucide-react";
+import { Calendar, Sparkles, Send, CheckCircle, MapPin, Users, DollarSign, Clock } from "lucide-react";
 
 export default function CreateTrip({ onTripCreated }) {
   const navigate = useNavigate();
@@ -23,6 +23,7 @@ export default function CreateTrip({ onTripCreated }) {
   const [isWaitingForAI, setIsWaitingForAI] = useState(false);
   const [isTripCreating, setIsTripCreating] = useState(false);
   const [error, setError] = useState("");
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const [datesEntered, setDatesEntered] = useState(false);
   const [manualDates, setManualDates] = useState({
@@ -31,6 +32,10 @@ export default function CreateTrip({ onTripCreated }) {
   });
 
   const chatContainerRef = useRef(null);
+
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
 
   const questionsSequence = [
     {
@@ -93,57 +98,51 @@ export default function CreateTrip({ onTripCreated }) {
     askAIForNextQuestion(questionsSequence[0].prompt);
   };
 
-  // In src/components/CreateTrip.jsx
+  const callGeminiAPI = async (prompt, history = []) => {
+    setIsWaitingForAI(true);
+    setError("");
+    
+    const apiUrl = import.meta.env.VITE_GEMINI_API_URL;
 
-const callGeminiAPI = async (prompt, history = []) => {
-  setIsWaitingForAI(true);
-  setError("");
-  
-  const apiUrl = import.meta.env.VITE_GEMINI_API_URL;
+    const formattedHistory = history.map(msg => ({
+      role: msg.role,
+      parts: [{ text: msg.text }],
+    }));
 
-  // --- FIX: Transform the chat history to match the API's expected format ---
-  const formattedHistory = history.map(msg => ({
-    role: msg.role,
-    parts: [{ text: msg.text }],
-  }));
+    const payload = {
+      contents: [...formattedHistory, { role: "user", parts: [{ text: prompt }] }],
+    };
 
-  const payload = {
-    // Use the newly formatted history along with the new prompt
-    contents: [...formattedHistory, { role: "user", parts: [{ text: prompt }] }],
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: { message: "The AI service returned an error." }}));
+        throw new Error(errorData.error?.message || "Failed to get AI response.");
+      }
+
+      const result = await response.json();
+      if (
+        result.candidates &&
+        result.candidates.length > 0 &&
+        result.candidates[0].content?.parts?.length > 0
+      ) {
+        return result.candidates[0].content.parts[0].text;
+      } else {
+        throw new Error("Gemini API returned an unexpected response structure.");
+      }
+    } catch (err) {
+      console.error("Error calling Gemini API:", err);
+      setError(err.message || "Failed to communicate with AI. Please try again.");
+      return null;
+    } finally {
+      setIsWaitingForAI(false);
+    }
   };
-
-  try {
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      // Try to get a specific error message from the API response
-      const errorData = await response.json().catch(() => ({ error: { message: "The AI service returned an error." }}));
-      throw new Error(errorData.error?.message || "Failed to get AI response.");
-    }
-
-    const result = await response.json();
-    if (
-      result.candidates &&
-      result.candidates.length > 0 &&
-      result.candidates[0].content?.parts?.length > 0
-    ) {
-      return result.candidates[0].content.parts[0].text;
-    } else {
-      // Handle cases where the API returns a success status but no content
-      throw new Error("Gemini API returned an unexpected response structure.");
-    }
-  } catch (err) {
-    console.error("Error calling Gemini API:", err);
-    setError(err.message || "Failed to communicate with AI. Please try again.");
-    return null;
-  } finally {
-    setIsWaitingForAI(false);
-  }
-};
 
   const askAIForNextQuestion = (prompt) => {
     setChatHistory((prev) => [...prev, { role: "model", text: prompt }]);
@@ -296,17 +295,15 @@ const callGeminiAPI = async (prompt, history = []) => {
         budget: collectedTripData.budget,
       };
       
-      // FIX: Destructure the response to get the nested 'trip' object.
       const { trip: newTrip } = await TripAPI.createTrip(payload);
   
-      // Now 'newTrip' is the actual trip object and 'newTrip._id' will be defined.
       if (collectedTripData.aiGeneratedItinerary) {
         for (const day of collectedTripData.aiGeneratedItinerary) {
           for (const event of day.events) {
             const startTimeISO = `${day.date}T${event.start_time}:00.000Z`;
             const endTimeISO = `${day.date}T${event.end_time}:00.000Z`;
   
-            await EventAPI.createEvent(newTrip._id, { // This will now have the correct ID
+            await EventAPI.createEvent(newTrip._id, {
               title: event.title,
               location: event.location,
               start_time: startTimeISO,
@@ -337,38 +334,43 @@ const callGeminiAPI = async (prompt, history = []) => {
   const isAIFlowStarted = datesEntered;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F5F5DC] via-[#F5F5DC] to-[#E08544]/20 p-6 font-['Inter']">
-      <div className="w-full max-w-4xl bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8 sm:p-10 flex flex-col h-[85vh] transition-all duration-300">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F5F5DC] via-[#F5F5DC] to-[#E08544]/20 p-6 font-['Inter'] custom-scrollbar">
+      <div className={`w-full max-w-5xl bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/30 p-8 sm:p-10 flex flex-col h-[90vh] transition-all duration-1000 ${
+        isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+      }`}>
         
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <Sparkles className="w-8 h-8 text-[#E08544] mr-3" />
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-[#1F474A] leading-tight tracking-tight">
+        {/* Enhanced Header */}
+        <div className="text-center mb-10">
+          <div className="flex items-center justify-center mb-6">
+            <div className="w-2 h-12 bg-gradient-to-b from-[#416B6B] to-[#E08544] rounded-full mr-6"></div>
+            <Sparkles className="w-10 h-10 text-[#E08544] mr-4" />
+            <h1 className="text-5xl sm:text-6xl font-black text-black leading-tight tracking-tight">
               Plan Your Trip
             </h1>
-            <Sparkles className="w-8 h-8 text-[#E08544] ml-3" />
+            <Sparkles className="w-10 h-10 text-[#E08544] ml-4" />
+            <div className="w-2 h-12 bg-gradient-to-b from-[#416B6B] to-[#E08544] rounded-full ml-6"></div>
           </div>
-          <p className="text-base sm:text-lg text-[#1F474A]/70 leading-relaxed font-medium">
+          <p className="text-xl text-black leading-relaxed font-semibold max-w-2xl mx-auto">
             Let Mio, your AI travel assistant, create the perfect itinerary for your group adventure
           </p>
         </div>
 
         {!isAIFlowStarted && (
-          /* Initial Date Selection */
+          /* Enhanced Initial Date Selection */
           <div className="flex-1 flex flex-col justify-center">
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-xl border border-white/20 p-6 sm:p-8 transition-all duration-300 hover:shadow-2xl">
-              <div className="flex items-center justify-center mb-6">
-                <Calendar className="w-6 h-6 text-[#416B6B] mr-2" />
-                <h2 className="text-2xl sm:text-3xl font-bold text-[#1F474A] tracking-tight">
+            <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/30 p-10 transition-all duration-500 hover:shadow-3xl">
+              <div className="flex items-center justify-center mb-8">
+                <div className="w-1 h-8 bg-gradient-to-b from-[#416B6B] to-[#E08544] rounded-full mr-4"></div>
+                <Calendar className="w-8 h-8 text-[#416B6B] mr-3" />
+                <h2 className="text-3xl font-black text-black tracking-tight">
                   Select Your Travel Dates
                 </h2>
               </div>
               
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-[#1F474A] tracking-wide mb-2">
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                  <div className="group">
+                    <label className="block text-sm font-bold text-black tracking-wide mb-3">
                       Arrival Date
                     </label>
                     <input
@@ -376,12 +378,12 @@ const callGeminiAPI = async (prompt, history = []) => {
                       name="arrival"
                       value={manualDates.arrival}
                       onChange={handleManualDateChange}
-                      className="w-full px-4 py-4 bg-white/80 text-[#1F474A] placeholder-[#1F474A]/40 border-2 border-[#416B6B]/20 rounded-xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-medium backdrop-blur-sm"
+                      className="w-full px-6 py-5 bg-white/90 text-black placeholder-black/40 border-2 border-[#416B6B]/20 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-semibold backdrop-blur-sm group-hover:border-[#E08544]/50"
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-[#1F474A] tracking-wide mb-2">
+                  <div className="group">
+                    <label className="block text-sm font-bold text-black tracking-wide mb-3">
                       Departure Date
                     </label>
                     <input
@@ -389,24 +391,28 @@ const callGeminiAPI = async (prompt, history = []) => {
                       name="departure"
                       value={manualDates.departure}
                       onChange={handleManualDateChange}
-                      className="w-full px-4 py-4 bg-white/80 text-[#1F474A] placeholder-[#1F474A]/40 border-2 border-[#416B6B]/20 rounded-xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-medium backdrop-blur-sm"
+                      className="w-full px-6 py-5 bg-white/90 text-black placeholder-black/40 border-2 border-[#416B6B]/20 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-semibold backdrop-blur-sm group-hover:border-[#E08544]/50"
                       required
                     />
                   </div>
                 </div>
 
                 {error && (
-                  <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
-                    <p className="text-red-700 text-sm font-medium">{error}</p>
+                  <div className="bg-red-50 border-l-4 border-red-400 p-6 rounded-2xl">
+                    <p className="text-red-700 text-base font-semibold">{error}</p>
                   </div>
                 )}
 
                 <button
                   type="button"
                   onClick={handleStartPlanning}
-                  className="w-full bg-gradient-to-r from-[#416B6B] to-[#E08544] text-white font-bold px-6 py-4 rounded-xl hover:shadow-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#E08544]/30 tracking-wide uppercase"
+                  className="group relative overflow-hidden w-full bg-gradient-to-r from-[#416B6B] to-[#E08544] text-white font-bold px-8 py-6 rounded-2xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#E08544]/30 tracking-wide uppercase text-lg"
                 >
-                  Start Planning with Mio
+                  <span className="relative z-10 flex items-center justify-center">
+                    <Sparkles className="w-6 h-6 mr-3" />
+                    Start Planning with Mio
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                 </button>
               </div>
             </div>
@@ -414,11 +420,11 @@ const callGeminiAPI = async (prompt, history = []) => {
         )}
 
         {isAIFlowStarted && (
-          /* AI Chat Interface */
+          /* Enhanced AI Chat Interface */
           <>
             <div
               ref={chatContainerRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4 bg-white/90 backdrop-blur-sm rounded-2xl shadow-inner border border-white/20 mb-6"
+              className="flex-1 overflow-y-auto p-6 space-y-6 bg-white/95 backdrop-blur-md rounded-2xl shadow-inner border border-white/30 mb-8 custom-scrollbar"
             >
               {chatHistory.map((msg, index) => (
                 <div
@@ -426,10 +432,10 @@ const callGeminiAPI = async (prompt, history = []) => {
                   className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[75%] p-4 rounded-2xl shadow-md font-medium transition-all duration-300 ${
+                    className={`max-w-[80%] p-6 rounded-2xl shadow-lg font-semibold transition-all duration-300 ${
                       msg.role === "user"
-                        ? "bg-gradient-to-r from-[#416B6B] to-[#416B6B]/80 text-white"
-                        : "bg-gradient-to-r from-[#E08544] to-[#E08544]/80 text-white"
+                        ? "bg-gradient-to-r from-[#416B6B] to-[#416B6B]/90 text-white"
+                        : "bg-gradient-to-r from-[#E08544] to-[#E08544]/90 text-white"
                     }`}
                   >
                     {msg.text}
@@ -438,22 +444,22 @@ const callGeminiAPI = async (prompt, history = []) => {
               ))}
               {isWaitingForAI && (
                 <div className="flex justify-start">
-                  <div className="max-w-[75%] p-4 rounded-2xl shadow-md bg-[#1F474A]/10 border border-[#416B6B]/20 flex items-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-[#416B6B]/20 border-t-[#E08544] mr-3"></div>
-                    <span className="text-[#1F474A]/70 font-medium">Mio is thinking...</span>
+                  <div className="max-w-[80%] p-6 rounded-2xl shadow-lg bg-[#416B6B]/10 border border-[#416B6B]/20 flex items-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#416B6B]/20 border-t-[#E08544] mr-4"></div>
+                    <span className="text-black font-semibold">Mio is thinking...</span>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Input Area */}
-            <div className="flex gap-3">
+            {/* Enhanced Input Area */}
+            <div className="flex gap-4">
               <input
                 type="text"
                 value={currentInput}
                 onChange={(e) => setCurrentInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="flex-1 px-4 py-4 bg-white/80 text-[#1F474A] placeholder-[#1F474A]/40 border-2 border-[#416B6B]/20 rounded-xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-medium backdrop-blur-sm"
+                className="flex-1 px-6 py-5 bg-white/90 text-black placeholder-black/40 border-2 border-[#416B6B]/20 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-semibold backdrop-blur-sm"
                 placeholder="Type your answer here..."
                 disabled={isWaitingForAI || isReadyForSubmission}
               />
@@ -461,73 +467,99 @@ const callGeminiAPI = async (prompt, history = []) => {
                 type="button"
                 onClick={processUserResponse}
                 disabled={isWaitingForAI || isReadyForSubmission || !currentInput.trim()}
-                className="px-6 py-4 bg-gradient-to-r from-[#416B6B] to-[#E08544] text-white font-bold rounded-xl hover:shadow-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#E08544]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="group relative overflow-hidden px-8 py-5 bg-gradient-to-r from-[#416B6B] to-[#E08544] text-white font-bold rounded-2xl hover:shadow-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#E08544]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                <Send className="w-5 h-5" />
+                <span className="relative z-10">
+                  <Send className="w-6 h-6" />
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
               </button>
             </div>
           </>
         )}
 
         {isReadyForSubmission && (
-          /* Trip Review & Creation */
-          <div className="mt-6 bg-white/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-xl border border-white/20 p-6 sm:p-8 max-h-[50vh] overflow-y-auto">
-            <div className="flex items-center justify-center mb-6">
-              <CheckCircle className="w-6 h-6 text-[#416B6B] mr-2" />
-              <h3 className="text-2xl sm:text-3xl font-bold text-[#1F474A] tracking-tight">
+          /* Enhanced Trip Review & Creation */
+          <div className="mt-8 bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/30 p-10 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-center mb-8">
+              <div className="w-1 h-8 bg-gradient-to-b from-[#416B6B] to-[#E08544] rounded-full mr-4"></div>
+              <CheckCircle className="w-8 h-8 text-[#416B6B] mr-3" />
+              <h3 className="text-3xl font-black text-black tracking-tight">
                 Review Your Adventure
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-              <div className="space-y-3">
-                <div>
-                  <span className="text-sm font-semibold text-[#1F474A] tracking-wide">Title:</span>
-                  <p className="text-base text-[#1F474A]/70 font-medium">{collectedTripData.title}</p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              <div className="space-y-4">
+                <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                  <div className="flex items-center mb-3">
+                    <Sparkles className="w-5 h-5 text-[#E08544] mr-2" />
+                    <span className="text-sm font-bold text-black tracking-wide">Title:</span>
+                  </div>
+                  <p className="text-lg text-black font-semibold">{collectedTripData.title}</p>
                 </div>
-                <div>
-                  <span className="text-sm font-semibold text-[#1F474A] tracking-wide">Destination:</span>
-                  <p className="text-base text-[#1F474A]/70 font-medium">{collectedTripData.destination}</p>
+                <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                  <div className="flex items-center mb-3">
+                    <MapPin className="w-5 h-5 text-[#416B6B] mr-2" />
+                    <span className="text-sm font-bold text-black tracking-wide">Destination:</span>
+                  </div>
+                  <p className="text-lg text-black font-semibold">{collectedTripData.destination}</p>
                 </div>
-                <div>
-                  <span className="text-sm font-semibold text-[#1F474A] tracking-wide">Dates:</span>
-                  <p className="text-base text-[#1F474A]/70 font-medium">
+                <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                  <div className="flex items-center mb-3">
+                    <Clock className="w-5 h-5 text-[#E08544] mr-2" />
+                    <span className="text-sm font-bold text-black tracking-wide">Dates:</span>
+                  </div>
+                  <p className="text-lg text-black font-semibold">
                     {collectedTripData.arrival} to {collectedTripData.departure}
                   </p>
                 </div>
               </div>
               
-              <div className="space-y-3">
-                <div>
-                  <span className="text-sm font-semibold text-[#1F474A] tracking-wide">Interests:</span>
-                  <p className="text-base text-[#1F474A]/70 font-medium">{collectedTripData.interests || "N/A"}</p>
+              <div className="space-y-4">
+                <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                  <div className="flex items-center mb-3">
+                    <Sparkles className="w-5 h-5 text-[#416B6B] mr-2" />
+                    <span className="text-sm font-bold text-black tracking-wide">Interests:</span>
+                  </div>
+                  <p className="text-lg text-black font-semibold">{collectedTripData.interests || "N/A"}</p>
                 </div>
-                <div>
-                  <span className="text-sm font-semibold text-[#1F474A] tracking-wide">Members:</span>
-                  <p className="text-base text-[#1F474A]/70 font-medium">{collectedTripData.memberEmails || "Just you"}</p>
+                <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                  <div className="flex items-center mb-3">
+                    <Users className="w-5 h-5 text-[#E08544] mr-2" />
+                    <span className="text-sm font-bold text-black tracking-wide">Members:</span>
+                  </div>
+                  <p className="text-lg text-black font-semibold">{collectedTripData.memberEmails || "Just you"}</p>
                 </div>
-                <div>
-                  <span className="text-sm font-semibold text-[#1F474A] tracking-wide">Budget:</span>
-                  <p className="text-base text-[#1F474A]/70 font-medium">
-                    {collectedTripData.budget ? `$${collectedTripData.budget}` : "Not specified"}
+                <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/40">
+                  <div className="flex items-center mb-3">
+                    <DollarSign className="w-5 h-5 text-[#416B6B] mr-2" />
+                    <span className="text-sm font-bold text-black tracking-wide">Budget:</span>
+                  </div>
+                  <p className="text-lg text-black font-semibold">
+                    {collectedTripData.budget ? `$${collectedTripData.budget.toLocaleString()}` : "Not specified"}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="mb-6">
-              <h4 className="text-lg font-bold text-[#1F474A] mb-4">Generated Itinerary:</h4>
-              <div className="space-y-4 max-h-48 overflow-y-auto">
+            <div className="mb-8">
+              <h4 className="text-2xl font-black text-black mb-6 flex items-center">
+                <div className="w-1 h-6 bg-gradient-to-b from-[#416B6B] to-[#E08544] rounded-full mr-3"></div>
+                Generated Itinerary:
+              </h4>
+              <div className="space-y-6 max-h-64 overflow-y-auto custom-scrollbar">
                 {collectedTripData.aiGeneratedItinerary && collectedTripData.aiGeneratedItinerary.map((day, index) => (
-                  <div key={index} className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/40">
-                    <p className="text-base font-bold text-[#416B6B] mb-2">
+                  <div key={index} className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/50 shadow-lg">
+                    <p className="text-lg font-black text-[#416B6B] mb-4 flex items-center">
+                      <div className="w-1 h-4 bg-gradient-to-b from-[#416B6B] to-[#E08544] rounded-full mr-3"></div>
                       Day {index + 1}: {format(parseISO(day.date), "PPPP")}
                     </p>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {day.events.map((event, eventIndex) => (
-                        <div key={eventIndex} className="pl-4 border-l-2 border-[#E08544]/30">
-                          <p className="text-sm font-semibold text-[#1F474A]">{event.title}</p>
-                          <p className="text-xs text-[#1F474A]/60">
+                        <div key={eventIndex} className="pl-6 border-l-2 border-[#E08544]/40 bg-white/40 rounded-xl p-4">
+                          <p className="text-base font-bold text-black mb-1">{event.title}</p>
+                          <p className="text-sm text-black/70 font-semibold">
                             {event.start_time} - {event.end_time} • {event.location}
                           </p>
                         </div>
@@ -541,16 +573,20 @@ const callGeminiAPI = async (prompt, history = []) => {
             <button
               onClick={handleFinalTripSubmission}
               disabled={isTripCreating || isWaitingForAI}
-              className="w-full bg-gradient-to-r from-[#416B6B] to-[#E08544] text-white font-bold px-6 py-4 rounded-xl hover:shadow-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#E08544]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none tracking-wide uppercase"
+              className="group relative overflow-hidden w-full bg-gradient-to-r from-[#416B6B] to-[#E08544] text-white font-bold px-8 py-6 rounded-2xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#E08544]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none tracking-wide uppercase text-lg"
             >
               {isTripCreating ? (
                 <div className="flex justify-center items-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white mr-3"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-white/30 border-t-white mr-4"></div>
                   Creating Your Adventure...
                 </div>
               ) : (
-                "Create Trip"
+                <span className="relative z-10 flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 mr-3" />
+                  Create Trip
+                </span>
               )}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
             </button>
           </div>
         )}
