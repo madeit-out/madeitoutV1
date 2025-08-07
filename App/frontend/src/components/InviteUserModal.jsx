@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Dialog } from "@headlessui/react";
 import { TripAPI } from "../adapters/apiAdapter"; // Adjust path if necessary
+import { UserPlus, Mail, Send, X } from "lucide-react";
 
 export default function InviteUserModal({ isOpen, onClose, tripId }) {
   const [identifier, setIdentifier] = useState("");
@@ -31,47 +32,86 @@ export default function InviteUserModal({ isOpen, onClose, tripId }) {
 
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-      {/* Darker, more immersive overlay */}
-      <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        {/* Modal Panel: Darker Ocean Blue background, softer rounded corners, modern shadow */}
-        <Dialog.Panel className="bg-[#012A3D] rounded-xl p-8 max-w-md w-full shadow-2xl text-white">
-          {/* Title: Light Teal Blue, bolder font */}
-          <Dialog.Title className="text-2xl font-bold mb-6 text-[#72ADBF]">
-            Invite User to Trip
-          </Dialog.Title>
+      {/* Enhanced Overlay */}
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-md" aria-hidden="true" />
 
-          {/* Input field: Deep Ocean Blue background, white text, light teal border, rounded-lg */}
-          <input
-            type="text"
-            placeholder="Enter username or email"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            className="w-full bg-[#01374A] text-white placeholder-gray-400 border border-[#72ADBF] rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-[#0395A7]"
-            disabled={isInviting}
-          />
+      <div className="fixed inset-0 flex items-center justify-center p-6">
+        {/* Enhanced Modal Panel */}
+        <Dialog.Panel className="bg-white/95 backdrop-blur-md rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-10 shadow-2xl border border-white/30">
+          {/* Enhanced Header */}
+          <div className="flex items-center justify-center mb-8">
+            <div className="w-1 h-8 bg-gradient-to-b from-[#416B6B] to-[#E08544] rounded-full mr-4"></div>
+            <UserPlus className="w-8 h-8 text-[#416B6B] mr-4" />
+            <Dialog.Title className="text-3xl font-black text-black tracking-tight">
+              Invite User to Trip
+            </Dialog.Title>
+          </div>
 
-          {error && <p className="text-red-400 text-sm mb-4">{error}</p>} {/* Error color */}
-          {successMessage && (
-            <p className="text-green-400 text-sm mb-4">{successMessage}</p> 
+          {/* Enhanced Input field */}
+          <div className="mb-6">
+            <label className="block text-sm font-bold text-black tracking-wide mb-3">
+              <Mail className="w-5 h-5 inline mr-2 text-[#E08544]" />
+              Username or Email
+            </label>
+            <input
+              type="text"
+              placeholder="Enter username or email"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              className="w-full px-6 py-5 bg-white/90 text-black placeholder-black/40 border-2 border-[#416B6B]/20 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-semibold backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isInviting}
+            />
+          </div>
+
+          {/* Enhanced Error Message */}
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-400 p-6 rounded-2xl mb-6">
+              <p className="text-red-700 text-base font-semibold">{error}</p>
+            </div>
           )}
 
-          <div className="flex justify-end space-x-3 mt-6"> {/* Increased space-x and mt */}
-            {/* Cancel Button: Secondary style with dark gray background, subtle hover */}
+          {/* Enhanced Success Message */}
+          {successMessage && (
+            <div className="bg-green-50 border-l-4 border-green-400 p-6 rounded-2xl mb-6">
+              <p className="text-green-700 text-base font-semibold">
+                {successMessage}
+              </p>
+            </div>
+          )}
+
+          {/* Enhanced Button Container */}
+          <div className="flex gap-4 mt-10">
+            {/* Enhanced Cancel Button */}
             <button
               onClick={onClose}
-              className="px-6 py-3 rounded-lg bg-gray-600 text-white hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isInviting}
+              className="group relative overflow-hidden flex-1 text-[#416B6B] font-bold px-6 py-5 rounded-2xl hover:bg-[#416B6B] hover:text-white transition-all duration-300 border-2 border-[#416B6B]/20 hover:border-[#416B6B] focus:outline-none focus:ring-4 focus:ring-[#416B6B]/30 disabled:opacity-50"
             >
-              Cancel
+              <span className="relative z-10 flex items-center justify-center">
+                <X className="w-5 h-5 mr-2" />
+                Cancel
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
             </button>
-            {/* Send Invite Button: Primary style with bright cyan, subtle hover transform */}
+
+            {/* Enhanced Send Invite Button */}
             <button
               onClick={handleInvite}
-              className="px-6 py-3 rounded-lg bg-[#0395A7] text-white hover:bg-[#5E877D] transition-all duration-300 ease-in-out shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#72ADBF] disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isInviting}
+              className="group relative overflow-hidden flex-1 bg-gradient-to-r from-[#416B6B] to-[#E08544] text-white font-bold px-8 py-5 rounded-2xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#E08544]/30 disabled:opacity-50 disabled:transform-none"
             >
-              {isInviting ? "Sending..." : "Send Invite"}
+              {isInviting ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-white/30 border-t-white mr-3"></div>
+                  <span>Sending...</span>
+                </div>
+              ) : (
+                <span className="relative z-10 flex items-center justify-center">
+                  <Send className="w-6 h-6 mr-2" />
+                  Send Invite
+                </span>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
             </button>
           </div>
         </Dialog.Panel>

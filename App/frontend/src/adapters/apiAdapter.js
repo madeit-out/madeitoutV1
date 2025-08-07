@@ -100,7 +100,7 @@ export const TripAPI = {
   inviteUser: async (tripId, email) => {
     // Changed identifier to email
     const res = await api.post(`/trips/${tripId}/invite`, {
-      identifier: email,
+      email: email,
     }); // Backend expects 'identifier'
     return res.data;
   },
