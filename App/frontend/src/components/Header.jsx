@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useUser } from "../context/UserContext";
 import { AuthAPI } from "../adapters/apiAdapter";
-import Logo from "../images/logo.png";
 import { LogOut, Menu, X, Home, User } from "lucide-react";
 
 export default function Header() {
@@ -37,20 +36,12 @@ export default function Header() {
   return (
     <header className="bg-gradient-to-r from-[#E08544]/95 to-[#416B6B]/95 text-[#1F474A] py-2 px-4 shadow-xl sticky top-0 z-40 backdrop-blur-md border-b border-[#1F474A]/10">
       <div className="container mx-auto flex items-center justify-between relative px-4 min-h-[60px]">
-        {/* Enhanced Logo and Brand Section */}
-        <div className={`flex items-center space-x-3 group transition-all duration-1000 ${
-          isLoaded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'
-        }`}>
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#1F474A]/20 to-[#E08544]/20 rounded-full transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 blur-sm"></div>
-            <img 
-              src={Logo} 
-              alt="Made It Out Logo" 
-              className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 drop-shadow-lg relative z-10" 
-            />
-            {/* Shimmer effect on hover */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 rounded-full"></div>
-          </div>
+        {/* Enhanced Brand Section */}
+        <div
+          className={`flex items-center group transition-all duration-1000 ${
+            isLoaded ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"
+          }`}
+        >
           <div className="flex flex-col">
             <h1 className="text-xl sm:text-2xl font-black text-[#1F474A] whitespace-nowrap tracking-tight leading-tight transition-all duration-300 group-hover:text-[#416B6B]">
               Made It Out
@@ -62,9 +53,11 @@ export default function Header() {
         </div>
 
         {/* Enhanced Desktop Navigation Bar (Visible on all screens) */}
-        <nav className={`flex items-center space-x-2 sm:space-x-3 transition-all duration-1000 delay-300 ${
-          isLoaded ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
-        }`}>
+        <nav
+          className={`flex items-center space-x-2 sm:space-x-3 transition-all duration-1000 delay-300 ${
+            isLoaded ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"
+          }`}
+        >
           <Link
             to="/dashboard"
             className="group relative overflow-hidden flex items-center text-[#1F474A]/80 hover:text-[#1F474A] font-bold transition-all duration-300 hover:scale-105 px-2 sm:px-3 py-2 rounded-xl hover:bg-[#1F474A]/10 backdrop-blur-sm no-underline border border-[#1F474A]/20 hover:border-[#1F474A]/40"
@@ -106,7 +99,7 @@ export default function Header() {
         <button
           onClick={toggleMenu}
           className={`md:hidden p-2 rounded-lg hover:bg-[#1F474A]/10 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#1F474A]/30 hover:scale-105 ${
-            isLoaded ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
+            isLoaded ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"
           }`}
           aria-label="Toggle navigation menu"
         >
