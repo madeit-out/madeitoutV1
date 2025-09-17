@@ -237,7 +237,9 @@ def get_trip(trip_id):
 
     return jsonify(enhance_trip_data(db, trip))
 
+
 # In app/routes/trips.py
+
 
 @trips_bp.route("/<trip_id>", methods=["PUT"])
 @jwt_required()
@@ -246,7 +248,7 @@ def update_trip(trip_id):
     user_id = get_user_object_id()
     if not user_id:
         return jsonify({"error": "Unauthorized"}), 401
-    
+
     try:
         trip_obj_id = ObjectId(trip_id)
     except errors.InvalidId:
@@ -260,21 +262,28 @@ def update_trip(trip_id):
         return jsonify({"error": "You are not authorized to edit this trip"}), 403
 
     data = request.get_json()
-    
+
     # --- FIX: Add the new fields to the whitelist ---
     allowed_fields = [
-        "title", "destination", "arrival", "departure", 
-        "description", "budget", "is_public", "cover_image_url"
+        "title",
+        "destination",
+        "arrival",
+        "departure",
+        "description",
+        "budget",
+        "is_public",
+        "cover_image_url",
     ]
     update_fields = {k: v for k, v in data.items() if k in allowed_fields}
 
     if not update_fields:
         return jsonify({"error": "No update fields provided"}), 400
-    
+
     db.trips.update_one({"_id": trip_obj_id}, {"$set": update_fields})
 
     updated_trip = db.trips.find_one({"_id": trip_obj_id})
     return jsonify(enhance_trip_data(db, updated_trip))
+
 
 @trips_bp.route("/my-trips", methods=["GET"])
 @jwt_required()
@@ -353,20 +362,24 @@ def delete_trip(trip_id):
         200,
     )
 
+
 @trips_bp.route("/<trip_id>/invite", methods=["POST"])
 @jwt_required()
-def invite_user_to_trip(trip_id):
+def invite_user_by_email(trip_id):
+    """
+    Invites a user to a trip by their email address.
+    """
     db = current_app.db
-    user_id = get_user_object_id() # Assumes you have a helper for this
+    user_id = get_user_object_id()
     if not user_id:
         return jsonify({"error": "Unauthorized"}), 401
 
     try:
         trip_obj_id = ObjectId(trip_id)
     except errors.InvalidId:
-        return jsonify({"error": "Invalid trip ID format"}), 400
+        return jsonify({"error": "Invalid trip ID"}), 400
 
-    # Security Check: Ensure the user sending the invite is a member of the trip
+    # Ensure the user sending the invite is a member of the trip
     trip = db.trips.find_one({"_id": trip_obj_id, "members": user_id})
     if not trip:
         return jsonify({"error": "Trip not found or you are not a member"}), 404
@@ -376,7 +389,7 @@ def invite_user_to_trip(trip_id):
     if not email_to_invite:
         return jsonify({"error": "Email of user to invite is required"}), 400
 
-    # Find the user to be invited
+    # Find the user to be invited by email
     user_to_invite = db.users.find_one({"email": email_to_invite.lower().strip()})
     if not user_to_invite:
         return jsonify({"error": f"User with email '{email_to_invite}' not found"}), 404
@@ -387,17 +400,79 @@ def invite_user_to_trip(trip_id):
     if invited_user_id in trip.get("members", []):
         return jsonify({"error": "User is already a member of this trip"}), 409
     if invited_user_id in trip.get("pending_invitations", []):
-        return jsonify({"error": "User already has a pending invitation for this trip"}), 409
+        return (
+            jsonify({"error": "User already has a pending invitation for this trip"}),
+            409,
+        )
 
     # Add the invite to the trip's pending invitations
     db.trips.update_one(
-        {"_id": trip_obj_id},
-        {"$addToSet": {"pending_invitations": invited_user_id}}
+        {"_id": trip_obj_id}, {"$addToSet": {"pending_invitations": invited_user_id}}
     )
-    # Also add the trip to the user's pending invitations
+    # Also add the trip ID to the user's pending invitations
     db.users.update_one(
-        {"_id": invited_user_id},
-        {"$addToSet": {"pending_invitations": trip_obj_id}}
+        {"_id": invited_user_id}, {"$addToSet": {"pending_invitations": trip_obj_id}}
     )
 
-    return jsonify({"message": f"Successfully invited {email_to_invite} to the trip"}), 200
+    return (
+        jsonify(
+            {
+                "message": f"Invitation sent to {user_to_invite.get('username', user_to_invite['email'])}"
+            }
+        ),
+        200,
+    )
+
+
+@trips_bp.route("/<trip_id>/invite_by_username", methods=["POST"])
+@jwt_required()
+def invite_user_by_username(trip_id):
+    """
+    Invites a user to a trip by their username.
+    """
+    db = current_app.db
+    user_id = get_user_object_id()
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        trip_obj_id = ObjectId(trip_id)
+    except errors.InvalidId:
+        return jsonify({"error": "Invalid trip ID"}), 400
+
+    # Ensure the user sending the invite is a member of the trip
+    trip = db.trips.find_one({"_id": trip_obj_id, "members": user_id})
+    if not trip:
+        return jsonify({"error": "Trip not found or you are not a member"}), 404
+
+    data = request.get_json()
+    username_to_invite = data.get("username")
+    if not username_to_invite:
+        return jsonify({"error": "Username of user to invite is required"}), 400
+
+    # Find the user to be invited by username
+    user_to_invite = db.users.find_one({"username": username_to_invite.strip()})
+    if not user_to_invite:
+        return jsonify({"error": f"User '{username_to_invite}' not found."}), 404
+
+    invited_user_id = user_to_invite["_id"]
+
+    # Check if the user is already a member or has a pending invite
+    if invited_user_id in trip.get("members", []):
+        return jsonify({"error": "User is already a member of this trip"}), 409
+    if invited_user_id in trip.get("pending_invitations", []):
+        return (
+            jsonify({"error": "User already has a pending invitation for this trip"}),
+            409,
+        )
+
+    # Add the invite to the trip's pending invitations
+    db.trips.update_one(
+        {"_id": trip_obj_id}, {"$addToSet": {"pending_invitations": invited_user_id}}
+    )
+    # Also add the trip ID to the user's pending invitations
+    db.users.update_one(
+        {"_id": invited_user_id}, {"$addToSet": {"pending_invitations": trip_obj_id}}
+    )
+
+    return jsonify({"message": f"Invitation sent to {user_to_invite['username']}"}), 200

@@ -2,7 +2,7 @@
 # import gevent.monkey
 # gevent.monkey.patch_all(ssl=False)
 
-from app import create_app
+from App import create_app
 
 # app, socketio_instance = create_app()
 

@@ -58,3 +58,26 @@ export const airports = [
   { name: "Auckland Airport", code: "AKL" },
   { name: "Nadi International Airport", code: "NAN" },
 ];
+
+export const airlines = {
+  B6: "JetBlue Airways",
+  AA: "American Airlines",
+  DL: "Delta Air Lines",
+  UA: "United Airlines",
+  WN: "Southwest Airlines",
+  AS: "Alaska Airlines",
+  NK: "Spirit Airlines",
+  F9: "Frontier Airlines",
+  HA: "Hawaiian Airlines",
+  // European
+  FR: "Ryanair",
+  BA: "British Airways",
+  LH: "Lufthansa",
+  AF: "Air France",
+  KL: "KLM Royal Dutch Airlines",
+  // Asian
+  SQ: "Singapore Airlines",
+  NH: "All Nippon Airways",
+  KE: "Korean Air",
+  // Add more as needed
+};

@@ -1,43 +1,21 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { TripAPI } from "../adapters/apiAdapter";
 import { useUser } from "../context/UserContext";
 import EditTripModal from "./EditTripModal";
+import { ClipLoader } from "react-spinners"; // Import the spinner
 
-// The 'refreshTrigger' prop has been removed from the function signature.
 export default function Dashboard() {
-  const { user, loadingUser } = useUser();
+  const { user, loadingUser, trips, loadingTrips, refreshTrips } = useUser();
   const navigate = useNavigate();
-
-  const [trips, setTrips] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [refreshing, setRefreshing] = useState(false);
+  
   const [isLoaded, setIsLoaded] = useState(false);
-
-  // States for the edit modal
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState(null);
 
-  const fetchTrips = async () => {
-    try {
-      setError(""); // Clear previous errors before fetching
-      const data = await TripAPI.getUserTrips();
-      setTrips(data);
-    } catch (err) {
-      console.error("Error fetching trips:", err);
-      setError("Failed to load trips. Please try again.");
-      setTrips([]); // Clear trips on error
-    }
-  };
-
   const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchTrips();
-    setRefreshing(false);
+    await refreshTrips();
   };
 
-  // Handlers for the edit modal
   const handleEditClick = (trip) => {
     setSelectedTrip(trip);
     setEditModalOpen(true);
@@ -51,48 +29,32 @@ export default function Dashboard() {
   const handleTripUpdated = async () => {
     setEditModalOpen(false);
     setSelectedTrip(null);
-    await fetchTrips(); // Refresh the trips list after an update
+    await refreshTrips(); 
   };
 
   useEffect(() => {
-    // If the user context is still loading, we don't need to do anything yet.
-    if (loadingUser) {
+    if (loadingUser || loadingTrips) {
       return;
     }
-
-    // If the context has finished loading AND we have a valid user, fetch their trips.
-    if (user) {
-      setLoading(true);
-      fetchTrips().finally(() => {
-        setLoading(false);
-        setIsLoaded(true); // Trigger animations once loaded
-      });
-    } else {
-      // If the context has finished loading and there is NO user,
-      // it means they are logged out. We can stop the loading spinner.
-      setLoading(false);
-      setTrips([]); // Ensure no old trip data is shown
-    }
-    // The 'refreshTrigger' prop has been removed from the dependency array.
-  }, [user, loadingUser]);
-
-  // Set loaded state when the user appears to trigger entry animations
-  useEffect(() => {
     if (user) {
       setIsLoaded(true);
     }
-  }, [user]);
+  }, [user, loadingUser, loadingTrips]);
 
-  // --- The rest of the file remains the same ---
+  
+  // 2. UPDATED LOADING CONDITION
   // Loading spinner for initial user check or data fetching
-  if (loadingUser || loading) {
+  if (loadingUser || loadingTrips) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F5F5DC] via-[#F5F5DC] to-[#E08544]/20">
         <div className="flex flex-col items-center bg-white/95 backdrop-blur-md p-12 rounded-3xl shadow-2xl border border-white/30">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-[#416B6B]/20"></div>
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-transparent border-t-[#E08544] absolute top-0"></div>
-          </div>
+          {/* Spinner component replaces the custom CSS animation */}
+          <ClipLoader
+            color={"#E08544"} // You can customize the color
+            loading={true}
+            size={50} // And the size
+            aria-label="Loading Spinner"
+          />
           <p className="text-[#1F474A] text-xl font-semibold mt-6 tracking-wide">
             Loading your adventures…
           </p>
@@ -101,66 +63,12 @@ export default function Dashboard() {
     );
   }
 
-  // Error display component
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F5F5DC] via-[#F5F5DC] to-[#E08544]/20 p-6">
-        <div className="text-center p-10 rounded-3xl bg-white/95 backdrop-blur-md shadow-2xl border border-white/30 max-w-md">
-          <div className="w-16 h-16 bg-red-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-            <svg
-              className="w-8 h-8 text-red-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-          <h3 className="text-xl font-bold text-[#1F474A] mb-4">
-            Something went wrong
-          </h3>
-          <p className="text-[#1F474A]/70 mb-8 leading-relaxed">{error}</p>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="bg-gradient-to-r from-[#416B6B] to-[#E08544] text-white font-semibold px-8 py-3 rounded-xl hover:shadow-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#E08544]/30 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            {refreshing ? (
-              <span className="flex items-center">
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Refreshing...
-              </span>
-            ) : (
-              "Try Again"
-            )}
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // REMOVED: The local error state display. Errors are now logged in the context.
+  // You could add an error state to the context if you want to display it here.
+
+  // --- The rest of the file remains the same ---
+  // The component will now automatically re-render with the correct `trips` data
+  // from the context whenever it changes.
 
   // Filter trips into categories
   const now = new Date();
@@ -291,7 +199,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Updated button section with edit button */}
           <div className="ml-4 flex flex-col items-end space-y-3">
             <div className="flex items-center space-x-2">
               <span
@@ -302,7 +209,6 @@ export default function Dashboard() {
               </span>
             </div>
             <div className="flex space-x-2">
-              {/* Show edit button only if user is the trip creator */}
               {user && trip.created_by === user._id && (
                 <button
                   onClick={() => handleEditClick(trip)}
@@ -446,11 +352,11 @@ export default function Dashboard() {
               <div className="flex space-x-4 items-center">
                 <button
                   onClick={handleRefresh}
-                  disabled={refreshing}
+                  disabled={loadingTrips} // Disable while refreshing
                   className="flex items-center justify-center w-12 h-12 rounded-xl bg-[#416B6B]/10 text-[#416B6B] hover:bg-[#416B6B] hover:text-white transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#416B6B]/30 disabled:opacity-50"
                   title="Refresh trips"
                 >
-                  {refreshing ? (
+                  {loadingTrips ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-current border-t-transparent"></div>
                   ) : (
                     <svg
@@ -559,7 +465,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* The EditTripModal is now included */}
       <EditTripModal
         isOpen={editModalOpen}
         onClose={handleEditModalClose}

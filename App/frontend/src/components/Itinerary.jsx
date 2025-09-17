@@ -307,6 +307,23 @@ export default function Itinerary() {
               <div className="space-y-6 text-black font-semibold">
                 {/* Enhanced dialog content */}
               </div>
+              <div className="space-y-4">
+                
+                <div className="text-lg font-semibold">Title: {modal.data?.title}</div>
+                <div className="text-lg font-semibold">Location: {modal.data?.location}</div>
+                <div className="text-lg font-semibold">
+                  <span className="font-bold">Start Time:</span> {modal.data?.start_time ? format(parseISO(modal.data.start_time), "p") : "No time"}
+                </div>
+                <div className="text-lg font-semibold">
+                  <span className="font-bold">End Time:</span> {modal.data?.end_time ? format(parseISO(modal.data.end_time), "p") : "No time"}
+                </div>
+                <div className="text-lg font-semibold">Cost: ${modal.data?.cost?.toLocaleString()}</div>
+                <div className="text-lg font-semibold">Type: {modal.data?.type}</div>
+                <div className="text-lg font-semibold">Notes: {modal.data?.notes}</div>
+                <div className="text-lg font-semibold">Status: {modal.data?.status}</div>
+                
+              </div>
+
               <div className="mt-10 flex justify-end gap-4">
                 <button 
                   onClick={() => handleDelete(modal.data._id)} 

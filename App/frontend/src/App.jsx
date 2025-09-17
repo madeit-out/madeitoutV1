@@ -1,7 +1,6 @@
 import { Routes, Route } from "react-router-dom";
-import { useState } from "react";
-
 import "./App.css";
+
 // Import Page components
 import HomePage from "./pages/HomePage";
 import SigninPage from "./pages/SigninPage";
@@ -10,65 +9,63 @@ import DashboardPage from "./pages/DashboardPage";
 import CreateTripPage from "./pages/CreateTripPage";
 import ItineraryPage from "./pages/ItineraryPage";
 import ProfilePage from "./pages/ProfilePage";
-import FlightSearchPage from "./pages/FlightSearchPage";
 import ProtectedRoute from "./components/ProtectedRoute";
-
-import { UserProvider } from "./context/UserContext";
+import FlightSearchPage from "./pages/FlightSearchPage";
+import AuthCallback from "./components/AuthCallback"; // NEW: Import the AuthCallback component
 
 function App() {
-  const [dashboardRefreshTrigger, setDashboardRefreshTrigger] = useState(0);
-
-  const triggerDashboardRefresh = () => {
-    setDashboardRefreshTrigger((prev) => prev + 1);
-  };
-
   return (
-    <UserProvider>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/signin" element={<SigninPage />} />
-        <Route path="/signup" element={<SignupPage />} />
+    <Routes>
+      {/* Public routes */}
+      <Route path="/" element={<HomePage />} />
+      <Route path="/signin" element={<SigninPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      {/* NEW: Route to handle Google login callback */}
+      <Route path="/auth/callback" element={<AuthCallback />} /> 
 
-        {/* Protected routes are now individually wrapped */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardPage
-                refreshTrigger={dashboardRefreshTrigger}
-                onTripChange={triggerDashboardRefresh}
-              />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/create-trip"
-          element={
-            <ProtectedRoute>
-              <CreateTripPage onTripCreated={triggerDashboardRefresh} />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/trips/:tripId/itinerary"
-          element={
-            <ProtectedRoute>
-              <ItineraryPage onTripChange={triggerDashboardRefresh} />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <ProfilePage onInviteAccepted={triggerDashboardRefresh} />
-            </ProtectedRoute>
-          }
-        />
-        {/* <Route path="/search-flights" element={<FlightSearchPage />} /> */}
-      </Routes>
-    </UserProvider>
+      {/* Protected routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/create-trip"
+        element={
+          <ProtectedRoute>
+            <CreateTripPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trips/:tripId/itinerary"
+        element={
+          <ProtectedRoute>
+            <ItineraryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route 
+        path="/search-flights" 
+        element={
+          <ProtectedRoute>
+            <FlightSearchPage />
+          </ProtectedRoute>
+        } 
+      />
+    </Routes>
   );
 }
 

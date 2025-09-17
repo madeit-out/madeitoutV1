@@ -4,7 +4,7 @@ import axios from "axios";
 
 // Create the base axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:5000/api",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -73,6 +73,10 @@ export const AuthAPI = {
     const res = await api.put("/auth/me", userData);
     return res.data;
   },
+  signInWithGoogle: () => {
+    // This will redirect the browser directly
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google_login`;
+  },
 };
 
 // -------------------------
@@ -102,6 +106,13 @@ export const TripAPI = {
     const res = await api.post(`/trips/${tripId}/invite`, {
       email: email,
     }); // Backend expects 'identifier'
+    return res.data;
+  },
+  // Invite user by username
+  inviteUserByUsername: async (tripId, username) => {
+    const res = await api.post(`/trips/${tripId}/invite_by_username`, {
+      username: username,
+    });
     return res.data;
   },
 

@@ -8,10 +8,20 @@ from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
 from flask_socketio import SocketIO  # Import SocketIO
 from amadeus import Client
+from oauthlib.oauth2 import WebApplicationClient
+import requests
 
 # Initialize SocketIO globally, but without the app instance yet.
 # This instance will be initialized with the app inside create_app().
 socketio = SocketIO()
+
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
+
+# OAuth 2 client setup
+google_oauth_client = WebApplicationClient(GOOGLE_CLIENT_ID)
+
 
 def create_app():
     load_dotenv()
@@ -36,31 +46,35 @@ def create_app():
     except Exception as e:
         print(f"Failed to initialize Amadeus client: {e}")
         app.amadeus = None
-        
+
     # Apply CORS globally for HTTP requests
     CORS(
         app,
         supports_credentials=True,
-        origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        origins="*",
     )
 
     jwt = JWTManager(app)
 
     # Initialize SocketIO with the Flask app here with proper configuration
     socketio.init_app(
-        app, 
+        app,
         cors_allowed_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-        async_mode='threading',  # Specify async mode
+        async_mode="threading",  # Specify async mode
         logger=True,  # Enable logging for debugging
         engineio_logger=True,  # Enable engine.io logging
-        transports=['polling', 'websocket'],  # Support both transports
+        transports=["polling", "websocket"],  # Support both transports
         allow_upgrades=True,
         ping_timeout=60,
-        ping_interval=25
+        ping_interval=25,
     )
-    
+
     # Store socketio instance in app.extensions for access in other modules
     app.extensions["socketio"] = socketio
+
+    # Add Google OAuth client to app extensions
+    app.google_oauth_client = google_oauth_client
+    app.google_discovery_url = GOOGLE_DISCOVERY_URL
 
     # Bcrypt init
     bcrypt = Bcrypt(app)
@@ -68,8 +82,8 @@ def create_app():
     app.extensions["bcrypt"] = bcrypt
 
     # Mongo init
-    client = MongoClient(app.config["MONGO_URI"])
-    app.db = client["made_it_out"]
+    mongo_client = MongoClient(app.config["MONGO_URI"])
+    app.db = mongo_client["made_it_out"]
 
     # Register Blueprints
     from .routes.auth import auth_bp

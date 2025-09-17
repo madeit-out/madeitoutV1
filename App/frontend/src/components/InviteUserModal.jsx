@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Dialog } from "@headlessui/react";
 import { TripAPI } from "../adapters/apiAdapter"; // Adjust path if necessary
-import { UserPlus, Mail, Send, X } from "lucide-react";
+import { UserPlus, Send, X } from "lucide-react"; // Note: Removed Mail icon
 
 export default function InviteUserModal({ isOpen, onClose, tripId }) {
   const [identifier, setIdentifier] = useState("");
@@ -13,14 +13,14 @@ export default function InviteUserModal({ isOpen, onClose, tripId }) {
     setError("");
     setSuccessMessage("");
     if (!identifier.trim()) {
-      setError("Please enter a username or email.");
+      setError("Please enter a username.");
       return;
     }
 
     setIsInviting(true);
 
     try {
-      const res = await TripAPI.inviteUser(tripId, identifier.trim());
+      const res = await TripAPI.inviteUserByUsername(tripId, identifier.trim());
       setSuccessMessage(res.message || "User invited successfully!");
       setIdentifier("");
     } catch (err) {
@@ -50,34 +50,18 @@ export default function InviteUserModal({ isOpen, onClose, tripId }) {
           {/* Enhanced Input field */}
           <div className="mb-6">
             <label className="block text-sm font-bold text-black tracking-wide mb-3">
-              <Mail className="w-5 h-5 inline mr-2 text-[#E08544]" />
-              Username or Email
+              Username
             </label>
             <input
               type="text"
-              placeholder="Enter username or email"
+              placeholder="Enter username"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              className="w-full px-6 py-5 bg-white/90 text-black placeholder-black/40 border-2 border-[#416B6B]/20 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-semibold backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isInviting}
+              className="w-full px-6 py-5 bg-white/90 text-black placeholder-black/40 border-2 border-[#416B6B]/20 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-semibold backdrop-blur-sm"
             />
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+            {successMessage && <p className="text-green-600 text-sm mt-2 font-bold">{successMessage}</p>}
           </div>
-
-          {/* Enhanced Error Message */}
-          {error && (
-            <div className="bg-red-50 border-l-4 border-red-400 p-6 rounded-2xl mb-6">
-              <p className="text-red-700 text-base font-semibold">{error}</p>
-            </div>
-          )}
-
-          {/* Enhanced Success Message */}
-          {successMessage && (
-            <div className="bg-green-50 border-l-4 border-green-400 p-6 rounded-2xl mb-6">
-              <p className="text-green-700 text-base font-semibold">
-                {successMessage}
-              </p>
-            </div>
-          )}
 
           {/* Enhanced Button Container */}
           <div className="flex gap-4 mt-10">
