@@ -5,7 +5,7 @@
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
-[![PWA](https://img.shields.io/badge/PWA-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
+
 
 ---
 
@@ -53,11 +53,6 @@ Made It Out is a comprehensive trip planning platform that brings your travel dr
 - **Profile Management** - Manage your account and invitations
 - **Collaborative Planning** - Work together on trip details
 
-### 📱 Progressive Web App
-- **Cross-Platform** - Works on desktop and mobile
-- **Offline Support** - Basic caching for offline use
-- **App-Like Experience** - Native feel on all devices
-- **Easy Installation** - One-click install on any platform
 
 ---
 
