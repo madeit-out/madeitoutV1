@@ -22,8 +22,8 @@ Made It Out is a comprehensive trip planning platform that brings your travel dr
 
 ---
 
-##Project Screenshots
-file:///var/folders/32/1w1x3071075c5ll8q2w9sljr0000gp/T/TemporaryItems/NSIRD_screencaptureui_yu2UHZ/Screenshot%202025-11-17%20at%202.59.26%E2%80%AFAM.png
+## Project Screenshots
+
 
 ## 🚀 Features
 
