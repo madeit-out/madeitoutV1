@@ -14,7 +14,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 
-// --- NO CHANGES TO SignIn, SignOut, or ChatMessage COMPONENTS ---
+
 
 const SignIn = () => {
   const signInWithGoogle = () => {

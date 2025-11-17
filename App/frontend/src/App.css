@@ -55,7 +55,7 @@ a {
   }
 }
 
-/* Custom scrollbar styling */
+/* scrollbar styling */
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
 }
@@ -90,7 +90,7 @@ html {
   outline: none;
 }
 
-/* Professional button styling */
+/* button styling */
 .btn-professional {
   position: relative;
   overflow: hidden;

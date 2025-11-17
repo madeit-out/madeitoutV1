@@ -181,7 +181,7 @@ function SignUp() {
             </div>
           )}
 
-          {/* Enhanced Sign Up Button */}
+          {/*Sign Up Button */}
           <button
             type="submit"
             disabled={isLoading}
@@ -202,7 +202,7 @@ function SignUp() {
           </button>
         </form>
 
-        {/* Enhanced Footer */}
+        {/* Footer */}
         <div className="mt-8 text-center">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">

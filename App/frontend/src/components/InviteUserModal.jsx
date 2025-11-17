@@ -32,13 +32,13 @@ export default function InviteUserModal({ isOpen, onClose, tripId }) {
 
   return (
     <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-      {/* Enhanced Overlay */}
+      {/* Overlay */}
       <div className="fixed inset-0 bg-black/70 backdrop-blur-md" aria-hidden="true" />
 
       <div className="fixed inset-0 flex items-center justify-center p-6">
-        {/* Enhanced Modal Panel */}
+        {/* Modal Panel */}
         <Dialog.Panel className="bg-white/95 backdrop-blur-md rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-10 shadow-2xl border border-white/30">
-          {/* Enhanced Header */}
+          {/*  Header */}
           <div className="flex items-center justify-center mb-8">
             <div className="w-1 h-8 bg-gradient-to-b from-[#416B6B] to-[#E08544] rounded-full mr-4"></div>
             <UserPlus className="w-8 h-8 text-[#416B6B] mr-4" />
@@ -47,7 +47,7 @@ export default function InviteUserModal({ isOpen, onClose, tripId }) {
             </Dialog.Title>
           </div>
 
-          {/* Enhanced Input field */}
+          {/* Input field */}
           <div className="mb-6">
             <label className="block text-sm font-bold text-black tracking-wide mb-3">
               Username
@@ -63,9 +63,9 @@ export default function InviteUserModal({ isOpen, onClose, tripId }) {
             {successMessage && <p className="text-green-600 text-sm mt-2 font-bold">{successMessage}</p>}
           </div>
 
-          {/* Enhanced Button Container */}
+          {/*Button Container */}
           <div className="flex gap-4 mt-10">
-            {/* Enhanced Cancel Button */}
+            {/* Cancel Button */}
             <button
               onClick={onClose}
               disabled={isInviting}
@@ -78,7 +78,7 @@ export default function InviteUserModal({ isOpen, onClose, tripId }) {
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
             </button>
 
-            {/* Enhanced Send Invite Button */}
+            {/* Send Invite Button */}
             <button
               onClick={handleInvite}
               disabled={isInviting}

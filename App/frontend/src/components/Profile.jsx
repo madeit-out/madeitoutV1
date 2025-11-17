@@ -126,7 +126,7 @@ const Profile = () => {
       isLoaded ? 'opacity-100' : 'opacity-0'
     }`}>
       <div className="max-w-4xl mx-auto">
-        {/* Enhanced Header */}
+        {/* Header */}
         <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start mb-12 gap-6 transition-all duration-1000 delay-300 ${
           isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}>
@@ -140,7 +140,7 @@ const Profile = () => {
         </div>
 
         {user && (
-          /* Enhanced Profile Card */
+          /*  Profile Card */
           <div className={`bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/30 p-10 mb-12 transition-all duration-1000 delay-500 hover:shadow-3xl ${
             isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}>
@@ -174,7 +174,7 @@ const Profile = () => {
           </div>
         )}
 
-        {/* Enhanced Pending Invites Section */}
+        {/* Pending Invites Section */}
         <div className={`bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/30 p-10 transition-all duration-1000 delay-700 ${
           isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}>
@@ -270,7 +270,7 @@ const Profile = () => {
         </div>
       </div>
       
-      {/* Enhanced Invite Details Modal */}
+      {/* Invite Details Modal */}
       <Dialog open={!!selectedInvite} onClose={() => setSelectedInvite(null)} className="relative z-50">
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md" aria-hidden="true" />
         <div className="fixed inset-0 flex items-center justify-center p-6">

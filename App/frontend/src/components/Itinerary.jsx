@@ -135,7 +135,7 @@ export default function Itinerary() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F5F5DC] via-[#F5F5DC] to-[#E08544]/20 py-12 px-6 font-['Inter'] custom-scrollbar">
       <div className="max-w-6xl mx-auto">
-        {/* Enhanced Header */}
+        {/*Header */}
         <div className={`flex justify-between items-center mb-12 transition-all duration-1000 ${
           isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}>
@@ -206,7 +206,7 @@ export default function Itinerary() {
             </div>
           </div>
         ) : (
-          /* Enhanced Carousel */
+          /* Carousel */
           <div 
             ref={carouselRef} 
             onMouseDown={onMouseDown} 
@@ -293,7 +293,7 @@ export default function Itinerary() {
           </div>
         )}
 
-        {/* Enhanced Event View Modal */}
+        {/* Event View Modal */}
         <Dialog open={modal.type === 'view'} onClose={() => setModal({ type: null })} className="relative z-50">
           <div className="fixed inset-0 bg-black/70 backdrop-blur-md" aria-hidden="true" />
           <div className="fixed inset-0 flex items-center justify-center p-4">

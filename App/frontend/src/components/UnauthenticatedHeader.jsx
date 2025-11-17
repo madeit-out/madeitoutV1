@@ -11,7 +11,7 @@ export default function UnauthenticatedHeader() {
   return (
     <header className="bg-gradient-to-r from-[#E08544]/95 to-[#416B6B]/95 text-[#1F474A] p-4 shadow-xl sticky top-0 z-40 backdrop-blur-md border-b border-[#1F474A]/10">
       <div className="container mx-auto flex items-center justify-between relative px-4">
-        {/* Enhanced Brand Section with animations */}
+        {/* Brand Section with animations */}
         <Link
           to="/"
           className={`flex items-center group !no-underline transition-all duration-1000 ${

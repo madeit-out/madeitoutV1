@@ -32,25 +32,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-// import Header from "../components/Header";
-// import {useEffect, useState} from "react";
-// import { Plane } from "lucide-react";
-
-// export default function DashboardPage() {
-//   const [loading, setLoading] = useState(true);
-//   useEffect(() => {
-//     const timer = setTimeout(() => {
-//       setLoading(false);
-//     }, 5000);
-//    return () => clearTimeout(timer);
-//   }, []);
-//   return (
-//     <div className="animate-bounce flex flex-col items-center justify-center min-h-screen bg-[#012A3D] text-white">
-//     <Plane className="animate-spin" size={48} />
-//     <div className="min-h-screen bg-[#012A3D] text-white">
-//       <Header />
-//       <Dashboard />
-//     </div>
-//       </div>
-//   );
-// }

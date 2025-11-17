@@ -81,7 +81,7 @@ export default function EditTripModal({ isOpen, onClose, onTripUpdated, trip }) 
                     <input name="destination" value={formData.destination || ''} onChange={handleChange} className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-[#E08544] focus:ring-2 focus:ring-[#E08544]/30" />
                 </div>
                 
-                {/* --- NEW: Budget Input Field --- */}
+                {/* --- Budget Input Field --- */}
                 <div>
                     <label className="block text-sm font-semibold text-[#1F474A] mb-2">Budget ($)</label>
                     <input name="budget" type="number" placeholder="1500" value={formData.budget || ''} onChange={handleChange} className="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-[#E08544] focus:ring-2 focus:ring-[#E08544]/30" />

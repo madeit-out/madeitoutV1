@@ -63,8 +63,7 @@ export default function Dashboard() {
     );
   }
 
-  // REMOVED: The local error state display. Errors are now logged in the context.
-  // You could add an error state to the context if you want to display it here.
+
 
   // --- The rest of the file remains the same ---
   // The component will now automatically re-render with the correct `trips` data
