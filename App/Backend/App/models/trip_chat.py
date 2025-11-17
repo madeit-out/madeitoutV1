@@ -14,7 +14,7 @@ class TripChatMessage:
             "text": text,
             "timestamp": datetime.utcnow()
         }
-        # FIX: Changed 'current_app.mongo.db' to 'current_app.db'
+        
         db = current_app.db
         result = db[cls.collection].insert_one(message)
         message["_id"] = str(result.inserted_id)
@@ -25,7 +25,7 @@ class TripChatMessage:
 
     @classmethod
     def get_by_trip(cls, trip_id, limit=50):
-        # FIX: Changed 'current_app.mongo.db' to 'current_app.db'
+        
         db = current_app.db
         messages = (
             db[cls.collection]
