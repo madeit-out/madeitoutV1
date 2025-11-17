@@ -25,6 +25,7 @@ Made It Out is a comprehensive trip planning platform that brings your travel dr
 ## Project Screenshots
 <img width="1917" height="957" alt="Screenshot 2025-11-17 at 3 19 36 AM" src="https://github.com/user-attachments/assets/d1359abb-c9ba-46d6-bdd7-2fd74669f292" />
 <img width="1906" height="951" alt="Screenshot 2025-11-17 at 3 28 21 AM" src="https://github.com/user-attachments/assets/374b86ef-533c-4f55-a78c-aba80c92ce10" />
+<img width="1911" height="952" alt="Screenshot 2025-11-17 at 3 34 55 AM" src="https://github.com/user-attachments/assets/95cff82e-df8e-4742-868b-cdc6f8778177" />
 <img width="1917" height="953" alt="Screenshot 2025-11-17 at 3 28 51 AM" src="https://github.com/user-attachments/assets/be720ba2-33d8-42b6-bb6d-f5f8cd99c2b6" />
 <img width="1915" height="952" alt="Screenshot 2025-11-17 at 3 33 28 AM" src="https://github.com/user-attachments/assets/66bbcda2-cb8c-4c93-8e2c-9a5324b930b3" />
 
