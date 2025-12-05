@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Family from "../images/family.png";
+import Family from "../images/Family.png";
 
 export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false);
