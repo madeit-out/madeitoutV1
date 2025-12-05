@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, current_app
+from flask import Flask, request, jsonify, current_app, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
@@ -59,7 +59,11 @@ def create_app():
     # Initialize SocketIO with the Flask app here with proper configuration
     socketio.init_app(
         app,
-        cors_allowed_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        cors_allowed_origins=[
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            os.getenv("RENDER_EXTERNAL_URL"),
+        ],
         async_mode="threading",  # Specify async mode
         logger=True,  # Enable logging for debugging
         engineio_logger=True,  # Enable engine.io logging
@@ -108,6 +112,21 @@ def create_app():
     @socketio.on("disconnect")
     def handle_disconnect():
         print(f"🔌 Client disconnected from main namespace: {request.sid}")
+
+    # Serve Vite frontend
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def serve_frontend(path):
+        dist_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "../../frontend/dist"
+        )
+
+        # If file exists, serve it
+        if path != "" and os.path.exists(os.path.join(dist_path, path)):
+            return send_from_directory(dist_path, path)
+
+        # Otherwise serve index.html (React router)
+        return send_from_directory(dist_path, "index.html")
 
     # Return both the Flask app and the global socketio instance
     return app, socketio

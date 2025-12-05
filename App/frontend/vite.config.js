@@ -11,7 +11,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/auth': {
+      'madeitoutv1/auth': {
         target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
