@@ -1,4 +1,4 @@
-import SignUp from "../components/SignUp";
+import SignUp from "../components/Signup.jsx;
 import UnauthenticatedHeader from "../components/UnauthenticatedHeader";
 
 export default function SignupPage() {
