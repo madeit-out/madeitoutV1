@@ -104,7 +104,7 @@ function SignIn() {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="w-full px-6 py-4 pl-12 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-semibold placeholder:text-gray-400"
+                className="w-full px-6 py-4 pl-12 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-semibold placeholder:text-black-400"
                 placeholder="Enter your email"
               />
             </div>
@@ -123,7 +123,7 @@ function SignIn() {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="w-full px-6 py-4 pl-12 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-semibold placeholder:text-gray-400"
+                className="w-full px-6 py-4 pl-12 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#E08544]/20 focus:border-[#E08544] transition-all duration-300 font-semibold placeholder:text-black-400"
                 placeholder="Enter your password"
               />
               <span
