@@ -242,3 +242,14 @@ export const EventAPI = {
     return res.data;
   },
 };
+
+// -------------------------
+// AI API
+// -------------------------
+export const AiAPI = {
+  // Proxies to Gemini via the backend, so the API key stays server-side.
+  generateItinerary: async (prompt, history = []) => {
+    const res = await api.post("/ai/itinerary", { prompt, history });
+    return res.data;
+  },
+};
