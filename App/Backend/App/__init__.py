@@ -7,6 +7,8 @@ from flask_bcrypt import Bcrypt
 
 from flask_jwt_extended import JWTManager
 from flask_socketio import SocketIO  # Import SocketIO
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from amadeus import Client
 from oauthlib.oauth2 import WebApplicationClient
 import requests
@@ -14,6 +16,9 @@ import requests
 # Initialize SocketIO globally, but without the app instance yet.
 # This instance will be initialized with the app inside create_app().
 socketio = SocketIO()
+
+# Rate limiter, shared across the app; routes opt in with @limiter.limit(...).
+limiter = Limiter(key_func=get_remote_address)
 
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
@@ -28,7 +33,18 @@ def create_app():
     app = Flask(__name__)
 
     app.config["MONGO_URI"] = os.getenv("MONGO_URI")
-    app.secret_key = os.environ.get("SECRET_KEY") or "super-secret-key"
+
+    secret_key = os.environ.get("SECRET_KEY")
+    if not secret_key:
+        if os.getenv("RENDER_EXTERNAL_URL"):
+            # Running on Render (production) with no SECRET_KEY set — fail
+            # loudly instead of silently signing sessions with a public,
+            # hardcoded default.
+            raise RuntimeError(
+                "SECRET_KEY environment variable must be set in production"
+            )
+        secret_key = "dev-only-insecure-secret-key"  # local/dev/test fallback only
+    app.secret_key = secret_key
 
     app.config["SESSION_COOKIE_SAMESITE"] = "None"
     app.config["SESSION_COOKIE_SECURE"] = (
@@ -47,14 +63,26 @@ def create_app():
         print(f"Failed to initialize Amadeus client: {e}")
         app.amadeus = None
 
+    # Explicit CORS allowlist — "*" combined with supports_credentials=True
+    # let any site make authenticated requests against this API.
+    allowed_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        os.getenv("FRONTEND_URL"),
+        os.getenv("RENDER_EXTERNAL_URL"),
+    ]
+    allowed_origins = [origin for origin in allowed_origins if origin]
+
     # Apply CORS globally for HTTP requests
     CORS(
         app,
         supports_credentials=True,
-        origins="*",
+        origins=allowed_origins,
     )
 
     jwt = JWTManager(app)
+
+    limiter.init_app(app)
 
     # Initialize SocketIO with the Flask app here with proper configuration
     socketio.init_app(

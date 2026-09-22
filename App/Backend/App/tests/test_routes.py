@@ -48,3 +48,37 @@ def test_auth_register_does_not_500(client):
 
     # Any non-500 status is acceptable for this smoke test
     assert response.status_code != 500
+
+
+def test_auth_register_rejects_short_password(client):
+    """
+    Registration should reject passwords under the minimum length
+    instead of hashing and storing them.
+    """
+    response = client.post(
+        "/api/auth/register",
+        json={
+            "username": "shortpw",
+            "email": "shortpw@example.com",
+            "password": "abc123",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "password" in response.get_json()["error"].lower()
+
+
+def test_auth_login_is_rate_limited(client):
+    """
+    Repeated login attempts from the same client should eventually get
+    a 429 instead of being processed indefinitely (brute-force guard).
+    """
+    payload = {"email": "nobody@example.com", "password": "wrong-password"}
+
+    responses = [client.post("/api/auth/login", json=payload) for _ in range(11)]
+
+    # The first 10 should be handled normally (401 for bad credentials);
+    # the 11th should be rejected by the rate limiter before it even
+    # reaches the view function.
+    assert all(r.status_code == 401 for r in responses[:10])
+    assert responses[10].status_code == 429

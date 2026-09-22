@@ -77,6 +77,16 @@ export const AuthAPI = {
     // This will redirect the browser directly
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/google_login`;
   },
+
+  // Trades the one-time code from the Google OAuth redirect for a real
+  // access token, so the token itself never sits in the URL.
+  exchangeCode: async (code) => {
+    const res = await api.post("/auth/exchange", { code });
+    if (res.data.access_token) {
+      localStorage.setItem("token", res.data.access_token);
+    }
+    return res.data;
+  },
 };
 
 // -------------------------

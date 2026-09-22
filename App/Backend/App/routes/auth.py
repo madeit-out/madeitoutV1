@@ -1,23 +1,62 @@
 from flask import Blueprint, request, jsonify, current_app, redirect
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from .. import limiter
 from ..models.user import User
 from bson import ObjectId
 import os
+import secrets
+import time
 import requests  # <-- FIX: Add this import
 from ..models.user import User
 from ..routes.trips import Trip
 
 auth_bp = Blueprint("auth", __name__)
 
+MIN_PASSWORD_LENGTH = 8
+
+# One-time exchange codes for the OAuth redirect, so the JWT never has to
+# ride in a URL (browser history / referrer headers). Single-process only —
+# fine for this app's current deployment, but wouldn't survive multiple
+# gunicorn workers without moving this to Mongo/Redis.
+_oauth_exchange_codes = {}
+_OAUTH_CODE_TTL_SECONDS = 60
+
+
+def _issue_oauth_exchange_code(user_id):
+    code = secrets.token_urlsafe(32)
+    _oauth_exchange_codes[code] = (user_id, time.time() + _OAUTH_CODE_TTL_SECONDS)
+    return code
+
+
+def _consume_oauth_exchange_code(code):
+    entry = _oauth_exchange_codes.pop(code, None)
+    if not entry:
+        return None
+    user_id, expires_at = entry
+    if time.time() > expires_at:
+        return None
+    return user_id
+
 
 @auth_bp.route("/register", methods=["POST"])
+@limiter.limit("10 per minute")
 def register():
     db = current_app.db
     bcrypt = current_app.extensions["bcrypt"]
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
-    if not all(k in data for k in ("username", "email", "password")):
+    if not data or not all(k in data for k in ("username", "email", "password")):
         return jsonify({"error": "Missing required fields"}), 400
+
+    if len(data["password"]) < MIN_PASSWORD_LENGTH:
+        return (
+            jsonify(
+                {
+                    "error": f"Password must be at least {MIN_PASSWORD_LENGTH} characters long"
+                }
+            ),
+            400,
+        )
 
     email = data["email"].lower().strip()
     if db.users.find_one({"email": email}):
@@ -43,12 +82,17 @@ def register():
 
 
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit("10 per minute")
 def login():
     db = current_app.db
     bcrypt = current_app.extensions["bcrypt"]
-    data = request.get_json()
-    email = data.get("email").lower().strip()
-    password = data.get("password").strip()
+    data = request.get_json(silent=True)
+
+    if not data or not data.get("email") or not data.get("password"):
+        return jsonify({"error": "Email and password are required"}), 400
+
+    email = data["email"].lower().strip()
+    password = data["password"].strip()
 
     user_data = db.users.find_one({"email": email})
     if not user_data:
@@ -170,7 +214,34 @@ def google_login_callback():
             user_id = new_user._id
         else:
             user_id = existing_user["_id"]
-        access_token = create_access_token(identity=str(user_id))
+        # Don't put the JWT itself in the redirect URL — it would end up in
+        # browser history and any Referer header the next page sends. Hand
+        # back a short-lived one-time code instead; the frontend trades it
+        # for the real access token via POST /api/auth/exchange.
+        exchange_code = _issue_oauth_exchange_code(str(user_id))
         frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
-        return redirect(f"{frontend_url}/auth/callback?token={access_token}")
+        return redirect(f"{frontend_url}/auth/callback?code={exchange_code}")
     return jsonify({"error": "Failed to authenticate with Google"}), 400
+
+
+@auth_bp.route("/exchange", methods=["POST"])
+@limiter.limit("10 per minute")
+def exchange_oauth_code():
+    """Trade a one-time OAuth redirect code for a real access token."""
+    db = current_app.db
+    data = request.get_json(silent=True)
+    code = (data or {}).get("code")
+    if not code:
+        return jsonify({"error": "Missing code"}), 400
+
+    user_id = _consume_oauth_exchange_code(code)
+    if not user_id:
+        return jsonify({"error": "Invalid or expired code"}), 400
+
+    user_data = db.users.find_one({"_id": ObjectId(user_id)})
+    if not user_data:
+        return jsonify({"error": "User not found"}), 404
+
+    user = User.from_dict(user_data)
+    access_token = create_access_token(identity=str(user._id))
+    return jsonify({"access_token": access_token, "user": user.to_dict()}), 200
