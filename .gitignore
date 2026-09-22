@@ -1,3 +1,10 @@
 .env
 .env.*
 !.env.example
+
+venv/
+.venv/
+__pycache__/
+*.pyc
+dist/
+node_modules/
