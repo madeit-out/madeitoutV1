@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { TripAPI, EventAPI } from "../adapters/apiAdapter";
+import { TripAPI, EventAPI, AiAPI } from "../adapters/apiAdapter";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { Calendar, Sparkles, Send, CheckCircle, MapPin, Users, DollarSign, Clock, Bot, Edit3, ArrowRight, Plus } from "lucide-react";
 import { useUser } from "../context/UserContext";
@@ -143,35 +143,17 @@ export default function CreateTrip() {
     }
   };
 
-  // AI-related functions (unchanged from original)
+  // AI-related functions. The Gemini call itself now happens server-side
+  // (POST /api/ai/itinerary) so the API key never ships in the frontend
+  // bundle — this just calls our own backend and keeps the same
+  // signature/return value the rest of the component expects.
   const callGeminiAPI = async (prompt, history = []) => {
     setIsWaitingForAI(true);
     setError("");
-    
-    const apiUrl = import.meta.env.VITE_GEMINI_API_URL;
-
-    const formattedHistory = history.map(msg => ({
-      role: msg.role,
-      parts: [{ text: msg.text }],
-    }));
-
-    const payload = {
-      contents: [...formattedHistory, { role: "user", parts: [{ text: prompt }] }],
-    };
 
     try {
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const result = await AiAPI.generateItinerary(prompt, history);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: { message: "The AI service returned an error." }}));
-        throw new Error(errorData.error?.message || "Failed to get AI response.");
-      }
-
-      const result = await response.json();
       if (
         result.candidates &&
         result.candidates.length > 0 &&
@@ -179,10 +161,10 @@ export default function CreateTrip() {
       ) {
         return result.candidates[0].content.parts[0].text;
       } else {
-        throw new Error("Gemini API returned an unexpected response structure.");
+        throw new Error("AI service returned an unexpected response structure.");
       }
     } catch (err) {
-      console.error("Error calling Gemini API:", err);
+      console.error("Error calling AI service:", err);
       setError(err.message || "Failed to communicate with AI. Please try again.");
       return null;
     } finally {

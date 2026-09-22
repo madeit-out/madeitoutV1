@@ -122,6 +122,7 @@ def create_app():
     from .routes.trips import trips_bp
     from .routes.events import events_bp
     from .routes.booking import booking_bp
+    from .routes.ai import ai_bp
 
     # CRUCIAL: Import the sockets module to register namespace handlers
     # This must come AFTER socketio.init_app() so the socketio instance is ready
@@ -130,6 +131,7 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(trips_bp, url_prefix="/api/trips")
     app.register_blueprint(events_bp, url_prefix="/api/events")
+    app.register_blueprint(ai_bp, url_prefix="/api/ai")
     app.register_blueprint(booking_bp, url_prefix="/api/booking")
 
     # Add some debug event handlers (optional, for troubleshooting)
