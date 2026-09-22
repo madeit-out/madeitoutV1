@@ -164,11 +164,30 @@ def update_current_user():
     return jsonify({"message": "Profile updated successfully", "user": user.to_dict()})
 
 
+# Google's OpenID discovery document rarely changes — Google's own docs
+# recommend caching it rather than refetching on every login. Simple
+# in-memory TTL cache, single-process (matches the OAuth exchange-code
+# store above).
+_google_provider_cfg_cache = {"value": None, "expires_at": 0}
+_GOOGLE_DISCOVERY_CACHE_TTL_SECONDS = 24 * 60 * 60
+
+
+def _get_google_provider_cfg():
+    if time.time() < _google_provider_cfg_cache["expires_at"]:
+        return _google_provider_cfg_cache["value"]
+
+    google_provider_cfg = requests.get(current_app.google_discovery_url).json()
+    _google_provider_cfg_cache["value"] = google_provider_cfg
+    _google_provider_cfg_cache["expires_at"] = (
+        time.time() + _GOOGLE_DISCOVERY_CACHE_TTL_SECONDS
+    )
+    return google_provider_cfg
+
+
 # Google OAuth Routes
 @auth_bp.route("/google_login")
 def google_login():
-    google_discovery_url = current_app.google_discovery_url
-    google_provider_cfg = requests.get(google_discovery_url).json()
+    google_provider_cfg = _get_google_provider_cfg()
     authorization_endpoint = google_provider_cfg["authorization_endpoint"]
     request_uri = current_app.google_oauth_client.prepare_request_uri(
         authorization_endpoint,
@@ -182,8 +201,7 @@ def google_login():
 def google_login_callback():
     db = current_app.db
     code = request.args.get("code")
-    google_discovery_url = current_app.google_discovery_url
-    google_provider_cfg = requests.get(google_discovery_url).json()
+    google_provider_cfg = _get_google_provider_cfg()
     token_endpoint = google_provider_cfg["token_endpoint"]
     token_response = current_app.google_oauth_client.prepare_token_request(
         token_endpoint,

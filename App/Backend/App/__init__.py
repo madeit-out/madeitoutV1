@@ -134,14 +134,17 @@ def create_app():
     app.register_blueprint(ai_bp, url_prefix="/api/ai")
     app.register_blueprint(booking_bp, url_prefix="/api/booking")
 
-    # Add some debug event handlers (optional, for troubleshooting)
+    # Debug event handlers (optional, for troubleshooting). Logged at
+    # debug level instead of printed — socketio's own logger/engineio_logger
+    # already cover this at info level, so this is just extra detail when
+    # you need it, not stdout noise on every connection in production.
     @socketio.on("connect")
     def handle_connect():
-        print(f"🔌 Client connected to main namespace: {request.sid}")
+        app.logger.debug(f"🔌 Client connected to main namespace: {request.sid}")
 
     @socketio.on("disconnect")
     def handle_disconnect():
-        print(f"🔌 Client disconnected from main namespace: {request.sid}")
+        app.logger.debug(f"🔌 Client disconnected from main namespace: {request.sid}")
 
     # Serve Vite frontend
     @app.route("/", defaults={"path": ""})
